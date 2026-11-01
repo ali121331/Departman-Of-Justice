@@ -23,6 +23,7 @@ const appRow = () => new ActionRowBuilder().addComponents(btn('apply:open','Baş
 const commandDefinitions = [
  new SlashCommandBuilder().setName('panel').setDescription('Departman panellerini gönderir').addStringOption(o=>o.setName('tür').setDescription('Panel türü').setRequired(true).addChoices({name:'Mesai',value:'mesai'},{name:'Başvuru',value:'basvuru'})).setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('mesai').setDescription('Kendi mesai durumun').addUserOption(o=>o.setName('üye').setDescription('Yetkililer başka üyeyi görebilir')),
+ new SlashCommandBuilder().setName('kurallar').setDescription('California temelli DOJ ve USM RP kuralları'),
  new SlashCommandBuilder().setName('numara-yenile').setDescription('DOJ ve USM numaralarını topluca yenile').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('numara-tara').setDescription('DOJ ve USM üyelerine eksik numaraları verir').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('mesai-liste').setDescription('Aktif mesaileri listeler').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
@@ -61,10 +62,19 @@ client.on('interactionCreate',async i=>{
  if(!i.inGuild())return;
  try{
  if(i.isChatInputCommand()){
+  if(i.commandName==='kurallar'){
+   const info=embed('⚖️ California • DOJ / USM RP Kuralları',
+    '**Kurumlar:** CA DOJ eyalet hukuk kurumu; USMS federal kolluk; yargıçlar bağımsız mahkeme mensuplarıdır.\n'+
+    '**Usul:** Arama, gözaltı, tutuklama ve delil işlemlerinde RP gerekçesi ve kayıt bulunmalı; tarafsızlık ve savunma hakları korunmalıdır.\n'+
+    '**Disiplin:** Yetki suistimali, sahte mesai, metagaming ve delil uydurmak yasaktır.\n'+
+    '**Numaralar:** DOJ 6 haneli RP sicil, USM 5 haneli RP rozet; resmi kimlik değildir.\n'+
+    '**Detaylı iç tüzük:** https://github.com/ali121331/Departman-Of-Justice/blob/main/CALIFORNIA_RP_RULES.md');
+   return i.reply({embeds:[info],flags:ephemeral});
+  }
   if(i.commandName==='panel'){
    if(!admin(i))return i.reply({content:'Bu komut için Sunucuyu Yönet yetkisi gerekli.',flags:ephemeral});
    const kind=i.options.getString('tür');
-   const e=embed(kind==='mesai'?'⚖️ DOJ • Mesai Paneli':'⚖️ DOJ • Başvuru Paneli',kind==='mesai'?'Görev başlangıcını ve bitişini aşağıdan kaydet.':'Departmana katılmak için başvuru formunu doldur.').setImage(BANNER).setThumbnail(LOGO);
+   const e=embed(kind==='mesai'?'⚖️ DOJ • Mesai Paneli':'⚖️ DOJ • Başvuru Paneli',kind==='mesai'?'California DOJ / USM RP görev başlangıç ve bitişini aşağıdan kaydet.':'California temelli DOJ / USM RP başvurusu için formu doldur. Görevler ve yetkiler kurum bazında ayrıdır.').setImage(BANNER).setThumbnail(LOGO);
    await i.channel.send({embeds:[e],components:[kind==='mesai'?dutyRow():appRow()]});
    return i.reply({content:'Panel gönderildi.',flags:ephemeral});
   }
