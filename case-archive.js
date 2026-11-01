@@ -136,6 +136,28 @@ function install(client){
    else await i.reply({content:'İşlem başarısız.',flags:MessageFlags.Ephemeral}).catch(()=>{});
   });
  });
+ client.on('interactionCreate',async i=>{
+  if(!i.isChatInputCommand()||i.commandName!=='dosya-durum'||!i.inGuild())return;
+  try{
+   const num=i.options.getString('numara').toUpperCase();
+   const status=i.options.getString('durum');
+   const item=await currentRecord(i.guild,num);
+   if(!item)return i.reply({content:'Dosya bulunamadı.',flags:MessageFlags.Ephemeral});
+   if(i.user.id!==item.prosecutor&&!judge(i))return i.reply({content:'Yetkiniz bulunmuyor.',flags:MessageFlags.Ephemeral});
+   if(!['active','appeal'].includes(item.status))return i.reply({content:'Dosya bu aşamada taşınamaz.',flags:MessageFlags.Ephemeral});
+   const parent=status==='closed'?CONFIG.closed:CONFIG.appeal;
+   const main=await i.guild.channels.fetch(item.shared);
+   await main.setParent(parent,{lockPermissions:false});
+   if(item.lawyer){
+    const lawyer=await i.guild.channels.fetch(item.lawyer).catch(()=>null);
+    if(lawyer)await lawyer.setParent(parent,{lockPermissions:false});
+   }
+   item.status=status;
+   await revise(i.guild,item);
+   await main.send({embeds:[embed('Dosya durumu • '+num,status==='closed'?'Dosya kapatıldı.':'İtiraz incelemesine gönderildi.')]});
+   await i.reply({content:'Dosya durumu güncellendi: '+status,flags:MessageFlags.Ephemeral});
+  }catch(e){console.error('Dosya taşıma:',e);if(!i.replied)await i.reply({content:'Dosya durumu güncellenemedi.',flags:MessageFlags.Ephemeral}).catch(()=>{});}
+ });
  client.on('guildCreate',g=>setup(g).catch(console.error));
 }
 module.exports={install,CONFIG};
