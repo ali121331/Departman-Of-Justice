@@ -2,6 +2,7 @@ const http = require('node:http');
 const numbering = require('./numbering');
 const caseArchive = require('./case-archive-v2');
 const unitDuty = require('./duty-units');
+const documentChannels = require('./document-channels');
 const installNumberRenewal = require('./renew-numbers');
 const { Client, GatewayIntentBits, ActivityType, SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, MessageFlags } = require('discord.js');
 
@@ -201,6 +202,7 @@ client.on('guildMemberAdd',async member=>{
 numbering.install(client);
 caseArchive.install(client);
 unitDuty.install(client);
+documentChannels.install(client);
 installNumberRenewal(client);
 client.on('error',e=>console.error('Discord:',e));
 client.login(ENV.DISCORD_TOKEN).catch(e=>{console.error('Login failed:',e);process.exit(1);});
