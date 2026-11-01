@@ -23,7 +23,7 @@ const appRow = () => new ActionRowBuilder().addComponents(btn('apply:open','Baş
 const commandDefinitions = [
  new SlashCommandBuilder().setName('panel').setDescription('Departman panellerini gönderir').addStringOption(o=>o.setName('tür').setDescription('Panel türü').setRequired(true).addChoices({name:'Mesai',value:'mesai'},{name:'Başvuru',value:'basvuru'})).setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('mesai').setDescription('Kendi mesai durumun').addUserOption(o=>o.setName('üye').setDescription('Yetkililer başka üyeyi görebilir')),
- new SlashCommandBuilder().setName('kurallar').setDescription('California temelli DOJ ve USM RP kuralları'),
+ new SlashCommandBuilder().setName('kurallar').setDescription('California DOJ ve USM görev ve usul ilkeleri'),
  new SlashCommandBuilder().setName('numara-yenile').setDescription('DOJ ve USM numaralarını topluca yenile').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('numara-tara').setDescription('DOJ ve USM üyelerine eksik numaraları verir').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('mesai-liste').setDescription('Aktif mesaileri listeler').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
@@ -63,18 +63,18 @@ client.on('interactionCreate',async i=>{
  try{
  if(i.isChatInputCommand()){
   if(i.commandName==='kurallar'){
-   const info=embed('⚖️ California • DOJ / USM RP Kuralları',
+   const info=embed('⚖️ California • DOJ / USM Usul ve Görev İlkeleri',
     '**Kurumlar:** CA DOJ eyalet hukuk kurumu; USMS federal kolluk; yargıçlar bağımsız mahkeme mensuplarıdır.\n'+
-    '**Usul:** Arama, gözaltı, tutuklama ve delil işlemlerinde RP gerekçesi ve kayıt bulunmalı; tarafsızlık ve savunma hakları korunmalıdır.\n'+
+    '**Usul:** Arama, gözaltı, tutuklama ve delil işlemlerinde hukuki dayanak ve işlem kaydı bulunmalı; tarafsızlık ve savunma hakları korunmalıdır.\n'+
     '**Disiplin:** Yetki suistimali, sahte mesai, metagaming ve delil uydurmak yasaktır.\n'+
-    '**Numaralar:** DOJ 6 haneli RP sicil, USM 5 haneli RP rozet; resmi kimlik değildir.\n'+
-    '**Detaylı iç tüzük:** https://github.com/ali121331/Departman-Of-Justice/blob/main/CALIFORNIA_RP_RULES.md');
+    '**Numaralar:** DOJ ve USM için ayrı kurum içi takip numaraları kullanılır; bunlar resmî devlet kimlikleri değildir.\n'+
+    '**Detaylı iç tüzük:** https://github.com/ali121331/Departman-Of-Justice/blob/main/CALIFORNIA_POLICY.md');
    return i.reply({embeds:[info],flags:ephemeral});
   }
   if(i.commandName==='panel'){
    if(!admin(i))return i.reply({content:'Bu komut için Sunucuyu Yönet yetkisi gerekli.',flags:ephemeral});
    const kind=i.options.getString('tür');
-   const e=embed(kind==='mesai'?'⚖️ DOJ • Mesai Paneli':'⚖️ DOJ • Başvuru Paneli',kind==='mesai'?'California DOJ / USM RP görev başlangıç ve bitişini aşağıdan kaydet.':'California temelli DOJ / USM RP başvurusu için formu doldur. Görevler ve yetkiler kurum bazında ayrıdır.').setImage(BANNER).setThumbnail(LOGO);
+   const e=embed(kind==='mesai'?'⚖️ DOJ • Mesai Paneli':'⚖️ DOJ • Başvuru Paneli',kind==='mesai'?'Görev başlangıç ve bitiş işlemlerini bu panelden kaydedin.':'Başvuru formunu eksiksiz doldurun. Görev ve yetkiler kurum bazında değerlendirilir.').setImage(BANNER).setThumbnail(LOGO);
    await i.channel.send({embeds:[e],components:[kind==='mesai'?dutyRow():appRow()]});
    return i.reply({content:'Panel gönderildi.',flags:ephemeral});
   }
@@ -107,7 +107,7 @@ client.on('interactionCreate',async i=>{
     new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('ic').setLabel('IC Ad Soyad').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(100)),
     new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('age').setLabel('Yaş').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(20)),
     new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('why').setLabel('Neden DOJ?').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(900)),
-    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('experience').setLabel('RP deneyimi').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(900))
+    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('experience').setLabel('İlgili görev deneyimi').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(900))
    );return i.showModal(modal);
   }
   if(i.customId.startsWith('review:')){
@@ -124,7 +124,7 @@ client.on('interactionCreate',async i=>{
    if(!ch||!ch.isTextBased()||ch.guildId!==i.guildId)return i.reply({content:'Başvuru kanalı ayarlanmamış. Yetkiliye bildir.',flags:ephemeral});
    const get=k=>i.fields.getTextInputValue(k);
    const e=embed('⚖️ Yeni DOJ Başvurusu','Başvuran: <@'+i.user.id+'>').addFields(
-    {name:'IC Ad Soyad',value:get('ic')},{name:'Yaş',value:get('age')},{name:'Neden DOJ?',value:get('why')},{name:'RP deneyimi',value:get('experience')}
+    {name:'IC Ad Soyad',value:get('ic')},{name:'Yaş',value:get('age')},{name:'Neden DOJ?',value:get('why')},{name:'İlgili görev deneyimi',value:get('experience')}
    ).setThumbnail(LOGO).setImage(BANNER);
    const row=new ActionRowBuilder().addComponents(btn('review:accept:'+i.user.id,'Kabul Et',ButtonStyle.Success),btn('review:reject:'+i.user.id,'Reddet',ButtonStyle.Danger));
    await ch.send({embeds:[e],components:[row],allowedMentions:{parse:[]}});
