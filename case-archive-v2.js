@@ -66,16 +66,19 @@ async function commandFiling(i){
  await i.deferReply({flags:MessageFlags.Ephemeral});
  const g=i.guild;
  const eligible=(await g.members.fetch()).filter(m=>!m.user.bot&&m.roles.cache.has(C.prosecutor));
- if(!eligible.size)return i.editReply('Atanabilecek savcı bulunamadı.');
- const prosecutor=[...eligible.values()][Math.floor(Math.random()*eligible.size)];
+ if(!eligible.size)return i.editReply('Savcı rolüne sahip atanabilir personel bulunamadı.');
+ const selected=i.options.getUser('savci');
+ if(selected&&!eligible.has(selected.id))return i.editReply('Seçtiğiniz kişi savcı rolüne sahip değil. Dosya açılmadı.');
+ const candidates=[...eligible.values()];
+ const prosecutor=selected?eligible.get(selected.id):candidates[require('node:crypto').randomInt(candidates.length)];
  const number=next(g);
  const review=await g.channels.create({name:'inceleme-'+number.toLowerCase(),type:ChannelType.GuildText,parent:C.pending,permissionOverwrites:perms(g,prosecutor.id)});
  const c={number,owner:i.user.id,prosecutor:prosecutor.id,status:'pending',review:review.id,shared:null,participants:{},judge:null,decision:null,noLawyer:true};
  await save(g,c);
  const buttons=new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('file:yes:'+number).setLabel('Kabul').setStyle(ButtonStyle.Success),new ButtonBuilder().setCustomId('file:no:'+number).setLabel('Red').setStyle(ButtonStyle.Danger));
- const body='**Atanan savcı:** <@'+prosecutor.id+'>\n**Sunan:** <@'+i.user.id+'>\n**Açıklama:** '+esc(description||'Belge sunuldu')+'\n**Ek:** '+(attachment?'['+esc(attachment.name)+']('+attachment.url+')':'Yok');
+ const body='**Atanan savcı:** <@'+prosecutor.id+'>\n**Atama yöntemi:** '+(selected?'Elle seçim':'Rastgele')+'\n**Sunan:** <@'+i.user.id+'>\n**Açıklama:** '+esc(description||'Belge sunuldu')+'\n**Ek:** '+(attachment?'['+esc(attachment.name)+']('+attachment.url+')':'Yok');
  await review.send({embeds:[card('Dosya '+number,body)],components:[buttons],allowedMentions:{parse:[]}});
- await i.editReply('Belge sunuldu. **Dosya:** '+number+' • **Atanan savcı:** <@'+prosecutor.id+'>. Avukat kanalı açılmayacak.');
+ await i.editReply('Belge sunuldu. **Dosya:** '+number+' • **Atanan savcı:** <@'+prosecutor.id+'> • **Atama:** '+(selected?'Elle':'Rastgele')+'. Avukat kanalı açılmayacak.');
 }
 async function filing(m){
  const g=m.guild;
