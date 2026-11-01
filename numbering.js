@@ -1,3 +1,4 @@
+const { randomInt } = require('node:crypto');
 const DOJ_ROLE_ID='1566506941705101384';
 const USM_ROLE_ID='1566506899116134501';
 const IC_CHANNEL_ID='1374086832941174844';
@@ -13,25 +14,31 @@ function queue(guild,job){
 function existingNumber(member){return member.nickname?.match(numberPattern)?.[1]||null}
 function isQualified(member){return member.roles.cache.has(DOJ_ROLE_ID)||member.roles.cache.has(USM_ROLE_ID)}
 function validUSMSuffix(pair){return pair[0]!==pair[1] && Math.abs(Number(pair[0])-Number(pair[1]))!==1}
+function hasLongRun(number){
+  for(let i=0;i<number.length-2;i++){
+    const a=Number(number[i]),b=Number(number[i+1]),c=Number(number[i+2]);
+    if((b-a===1&&c-b===1)||(b-a===-1&&c-b===-1))return true;
+  }
+  return false;
+}
 function pickNumber(member,members){
+  // USM badge (5 digits) and DOJ registry (6 digits) have separate namespaces.
+  // If a user has both roles, USM takes precedence for the nickname.
   const usm=member.roles.cache.has(USM_ROLE_ID);
   const used=new Set(),suffixes=new Set();
   for(const m of members.values()){
     const num=existingNumber(m);
     if(!num)continue;
-    used.add(num);
-    if(m.roles.cache.has(USM_ROLE_ID))suffixes.add(num.slice(-2));
+    if(usm && m.roles.cache.has(USM_ROLE_ID) && num.length===5){
+      used.add(num); suffixes.add(num.slice(-2));
+    }
+    if(!usm && m.roles.cache.has(DOJ_ROLE_ID) && num.length===6)used.add(num);
   }
-  if(usm){
-    for(let n=10000;n<=99999;n++){
-      const num=String(n),pair=num.slice(-2);
-      if(!used.has(num)&&validUSMSuffix(pair)&&!suffixes.has(pair))return num;
-    }
-  }else{
-    for(let n=100000;n<=999999;n++){
-      const num=String(n);
-      if(!used.has(num))return num;
-    }
+  for(let attempt=0;attempt<30000;attempt++){
+    const num=String(usm?randomInt(10000,100000):randomInt(100000,1000000));
+    if(used.has(num))continue;
+    if(usm && (!validUSMSuffix(num.slice(-2)) || suffixes.has(num.slice(-2)) || hasLongRun(num)))continue;
+    return num;
   }
   return null;
 }
