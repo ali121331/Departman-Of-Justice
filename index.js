@@ -1,6 +1,7 @@
 const http = require('node:http');
 const numbering = require('./numbering');
 const caseArchive = require('./case-archive-v2');
+const unitDuty = require('./duty-units');
 const installNumberRenewal = require('./renew-numbers');
 const { Client, GatewayIntentBits, ActivityType, SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, MessageFlags } = require('discord.js');
 
@@ -24,7 +25,10 @@ const dutyRow = () => new ActionRowBuilder().addComponents(btn('duty:start','Mes
 const appRow = () => new ActionRowBuilder().addComponents(btn('apply:open','Başvuru Yap',ButtonStyle.Primary));
 const commandDefinitions = [
  new SlashCommandBuilder().setName('panel').setDescription('Departman panellerini gönderir').addStringOption(o=>o.setName('tür').setDescription('Panel türü').setRequired(true).addChoices({name:'Mesai',value:'mesai'},{name:'Başvuru',value:'basvuru'})).setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
- new SlashCommandBuilder().setName('mesai').setDescription('Kendi mesai durumun').addUserOption(o=>o.setName('üye').setDescription('Yetkililer başka üyeyi görebilir')),
+ new SlashCommandBuilder().setName('mesai').setDescription('DOJ / USM mesai bilgisi').addUserOption(o=>o.setName('uye').setDescription('Personel')),
+ new SlashCommandBuilder().setName('mesai-duzenle').setDescription('Personelin mesai süresini dakika olarak artır/azalt').addUserOption(o=>o.setName('uye').setDescription('Personel').setRequired(true)).addStringOption(o=>o.setName('kurum').setDescription('Kurum').setRequired(true).addChoices({name:'DOJ',value:'DOJ'},{name:'USM',value:'USM'})).addIntegerOption(o=>o.setName('dakika').setDescription('Pozitif ekle, negatif çıkar').setRequired(true)).setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+ new SlashCommandBuilder().setName('mesai-sonlandir').setDescription('Aktif mesaiyi yönetici olarak bitir').addUserOption(o=>o.setName('uye').setDescription('Personel').setRequired(true)).addStringOption(o=>o.setName('kurum').setDescription('Kurum').setRequired(true).addChoices({name:'DOJ',value:'DOJ'},{name:'USM',value:'USM'})).setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+ new SlashCommandBuilder().setName('mesai-sifirla').setDescription('Personelin veya kurumun mesaisini sıfırla').addStringOption(o=>o.setName('kurum').setDescription('Kurum').setRequired(true).addChoices({name:'DOJ',value:'DOJ'},{name:'USM',value:'USM'})).addUserOption(o=>o.setName('uye').setDescription('Personel (tüm değilse)')).addBooleanOption(o=>o.setName('tum').setDescription('Kurumdaki herkes')).setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('reddi-hakim').setDescription('Dosyaya mevcut hakimden farklı yeni hakim ata').addStringOption(o=>o.setName('dosya').setDescription('Dosya numarası').setRequired(true)).addStringOption(o=>o.setName('gerekce').setDescription('Gerekçe veya belge')).addAttachmentOption(o=>o.setName('belge').setDescription('Gerekçe yerine belge')),
  new SlashCommandBuilder().setName('dosya-kapat').setDescription('Karar belgesiyle dosyayı kapat').addStringOption(o=>o.setName('dosya').setDescription('Dosya numarası').setRequired(true)).addStringOption(o=>o.setName('gerekce').setDescription('Kapatma gerekçesi (belge yerine yazılabilir)')).addAttachmentOption(o=>o.setName('belge').setDescription('Karar veya kapatma belgesi (gerekçe yerine)')),
  new SlashCommandBuilder().setName('itiraz').setDescription('İtiraz dilekçesiyle dosyayı itiraza gönder').addStringOption(o=>o.setName('dosya').setDescription('Dosya numarası').setRequired(true)).addStringOption(o=>o.setName('gerekce').setDescription('İtiraz gerekçesi (belge yerine yazılabilir)')).addAttachmentOption(o=>o.setName('belge').setDescription('İtiraz dilekçesi / belge (gerekçe yerine)')),
@@ -97,7 +101,7 @@ srv.listen(Number(ENV.PORT||10000),'0.0.0.0');
 client.once('ready',async()=>{
  console.log('DOJ online:',client.user.tag);
  client.user.setPresence({activities:[{name:'anevrix yapmıştır',type:ActivityType.Playing}],status:'online'});
- try{await loadDuty();}catch(e){console.error('Duty load:',e);}
+ try{/* Legacy duty state replaced by duty-units.js */}catch(e){console.error('Duty load:',e);}
  const target=ENV.GUILD_ID?client.guilds.cache.filter(g=>g.id===ENV.GUILD_ID):client.guilds.cache;
  for(const [id,g] of target){try{await g.commands.set(commandDefinitions.map(c=>c.toJSON()));registered.add(id);console.log('Commands registered:',id);}catch(e){console.error('Command register failed:',id,e.message);}}
 });
@@ -118,28 +122,28 @@ client.on('interactionCreate',async i=>{
   if(i.commandName==='panel'){
    if(!admin(i))return i.reply({content:'Bu komut için Sunucuyu Yönet yetkisi gerekli.',flags:ephemeral});
    const kind=i.options.getString('tür');
-   const e=embed(kind==='mesai'?'⚖️ DOJ • Mesai Paneli':'⚖️ DOJ • Başvuru Paneli',kind==='mesai'?'Görev başlangıç ve bitiş işlemlerini bu panelden kaydedin.':'Başvuru formunu eksiksiz doldurun. Görev ve yetkiler kurum bazında değerlendirilir.').setImage(BANNER).setThumbnail(LOGO);
-   await i.channel.send({embeds:[e],components:[kind==='mesai'?dutyRow():appRow()]});
+   const e=embed(kind==='mesai'?'⚖️ DOJ / USM • Mesai Paneli':'⚖️ DOJ • Başvuru Paneli',kind==='mesai'?'Görev başlangıç ve bitiş işlemlerini bu panelden kaydedin.':'Başvuru formunu eksiksiz doldurun. Görev ve yetkiler kurum bazında değerlendirilir.').setImage(BANNER).setThumbnail(LOGO);
+   await i.channel.send({embeds:[e],components:kind==='mesai'?unitDuty.panel():[appRow()]});
    return i.reply({content:'Panel gönderildi.',flags:ephemeral});
   }
-  if(i.commandName==='mesai'){
+  if(false&&i.commandName==='mesai'){
    const u=i.options.getUser('üye')||i.user;if(u.id!==i.user.id&&!admin(i))return i.reply({content:'Başkasının mesaisini görüntüleyemezsin.',flags:ephemeral});
    return i.reply({embeds:[embed('Mesai • '+u.username,showDuty(i.guildId+':'+u.id))],flags:ephemeral});
   }
-  if(i.commandName==='mesai-liste'){
+  if(false&&i.commandName==='mesai-liste'){
    if(!admin(i))return i.reply({content:'Yetkin yok.',flags:ephemeral});
    const list=[...sessions.entries()].filter(([k])=>k.startsWith(i.guildId+':')).slice(0,40).map(([k,v])=>'<@'+k.split(':')[1]+'> • '+fmt(Date.now()-v));
    return i.reply({embeds:[embed('Aktif Mesailer',list.join('\\n')||'Aktif mesai yok.')],flags:ephemeral});
   }
  }
  if(i.isButton()){
-  if(i.customId==='duty:me')return i.reply({embeds:[embed('Mesai Bilgim',showDuty(uid(i)))],flags:ephemeral});
-  if(i.customId==='duty:start'){
+  if(false&&i.customId==='duty:me')return i.reply({embeds:[embed('Mesai Bilgim',showDuty(uid(i)))],flags:ephemeral});
+  if(false&&i.customId==='duty:start'){
    if(sessions.has(uid(i)))return i.reply({content:'Zaten mesaidesin.',flags:ephemeral});
    const now=Date.now();await audit(i.guildId,i.user.id,'start',totals.get(uid(i))||0,now,null);sessions.set(uid(i),now);
    return i.reply({content:'✅ Mesain başladı: <t:'+Math.floor(now/1000)+':F>',flags:ephemeral});
   }
-  if(i.customId==='duty:end'){
+  if(false&&i.customId==='duty:end'){
    const start=sessions.get(uid(i));if(!start)return i.reply({content:'Aktif mesain yok.',flags:ephemeral});
    const now=Date.now();const duration=now-start;const total=(totals.get(uid(i))||0)+duration;
    await audit(i.guildId,i.user.id,'end',total,start,now);sessions.delete(uid(i));totals.set(uid(i),total);
@@ -196,6 +200,7 @@ client.on('guildMemberAdd',async member=>{
 });
 numbering.install(client);
 caseArchive.install(client);
+unitDuty.install(client);
 installNumberRenewal(client);
 client.on('error',e=>console.error('Discord:',e));
 client.login(ENV.DISCORD_TOKEN).catch(e=>{console.error('Login failed:',e);process.exit(1);});
