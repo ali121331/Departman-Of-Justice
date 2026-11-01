@@ -23,7 +23,7 @@ server.listen(port, '0.0.0.0', () => console.log('Health server listening on por
 
 client.once('ready', () => {
   console.log('Departman Of Justice online:', client.user.tag);
-  client.user.setPresence({ activities: [{ name: 'Departman Of Justice', type: ActivityType.Watching }], status: 'online' });
+  client.user.setPresence({ activities: [{ name: 'anevrix yapmıştır', type: ActivityType.Playing }], status: 'online' });
 });
 client.on('error', (error) => console.error('Discord client error:', error));
 client.login(token).catch((error) => {
