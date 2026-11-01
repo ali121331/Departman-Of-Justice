@@ -132,6 +132,14 @@ client.on('interactionCreate',async i=>{
  }
  }catch(e){console.error('Interaction failed:',e);if(i.replied||i.deferred)await i.followUp({content:'İşlem başarısız oldu. Ayarları ve yetkileri kontrol edin.',flags:ephemeral}).catch(()=>{});else await i.reply({content:'İşlem başarısız oldu. Ayarları ve yetkileri kontrol edin.',flags:ephemeral}).catch(()=>{});}
 });
+client.on('guildMemberAdd',async member=>{
+  try{
+    const roleId='1426712033428246660';
+    if(member.roles.cache.has(roleId))return;
+    await member.roles.add(roleId,'Yeni katılan üye: Kayıtsız rolü');
+    console.log('Kayıtsız rolü verildi:',member.id);
+  }catch(err){console.error('Kayıtsız rolü verilemedi:',member.id,err.message);}
+});
 numbering.install(client);
 installNumberRenewal(client);
 client.on('error',e=>console.error('Discord:',e));
