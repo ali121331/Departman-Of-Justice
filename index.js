@@ -25,6 +25,7 @@ const appRow = () => new ActionRowBuilder().addComponents(btn('apply:open','Baş
 const commandDefinitions = [
  new SlashCommandBuilder().setName('panel').setDescription('Departman panellerini gönderir').addStringOption(o=>o.setName('tür').setDescription('Panel türü').setRequired(true).addChoices({name:'Mesai',value:'mesai'},{name:'Başvuru',value:'basvuru'})).setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('mesai').setDescription('Kendi mesai durumun').addUserOption(o=>o.setName('üye').setDescription('Yetkililer başka üyeyi görebilir')),
+ new SlashCommandBuilder().setName('dosya-durum').setDescription('Dosyayı kapat veya itiraza gönder').addStringOption(o=>o.setName('numara').setDescription('Dosya numarası').setRequired(true)).addStringOption(o=>o.setName('durum').setDescription('Yeni durum').setRequired(true).addChoices({name:'Kapat',value:'closed'},{name:'İtiraza gönder',value:'appeal'})),
  new SlashCommandBuilder().setName('kurallar').setDescription('California DOJ ve USM görev ve usul ilkeleri'),
  new SlashCommandBuilder().setName('numara-yenile').setDescription('DOJ ve USM numaralarını topluca yenile').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('numara-tara').setDescription('DOJ ve USM üyelerine eksik numaraları verir').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
