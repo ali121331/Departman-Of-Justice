@@ -73,3 +73,12 @@ Botu davet ederken `bot` ve `applications.commands` scope'larıyla davet et. İl
 - Ret kararında savcı metni ve ekleri karar arşivinde tutulur; aktif dosya kanalı açılmaz.
 - Karar verildiğinde Onay Bekleyen inceleme kanalı, **Kapanan Dosyalar** kategorisinde erişimi kapalı **karar-...** kaydı olarak saklanır. Kaydı silmemek, yeniden başlatma sonrası veri ve delillerin korunması için gereklidir.
 - Otomatik arşiv yalnızca son 500 inceleme mesajındaki savcı metin/eklerini yeni aktif dosyaya kopyalar. Daha büyük dosyalar için kalıcı belge deposu gerekir.
+
+## Dosya odaları ve karar sonrası kapanış — güncel
+- Her belge sunan kişi için `doj-avukat-KULLANICI_ID` kategorisi; kabul edilen dosya için `avukat-CA-...` kanalı burada açılır.
+- Her atanmış savcı için `doj-savci-KULLANICI_ID` kategorisi; kabul edilen dosya için `savci-CA-...` kanalı burada açılır.
+- Bu iki çalışma kanalı **Aktif Dosyalar** kategorisinde değildir. Ortak `dosya-CA-...` kanalı Aktif Dosyalar içinde kalır.
+- Savcı ve belge sunan kişinin çalışma kanallarına gönderilen metin ve ek bağlantıları ortak dosya kanalına yansıtılır.
+- Karar verildikten sonra Onay Bekleyen kategorisindeki **inceleme kanalı silinir**. Kabulde belge ve karar önce aktif kanala aktarılır; ret halinde ayrı bir `ret-CA-...` karar kaydı Kapanan Dosyalar kategorisine yazılır.
+- Eski sürümde açılmış dosyaların özel kanalları otomatik taşınmaz; yeni onaylanan dosyalar yeni kategori düzenini kullanır.
+- Silinen inceleme kanalı geri alınamaz. Aktarılmayan mesajlar kaybolabileceğinden gerçek belgeler için yedekleme gerekir.
