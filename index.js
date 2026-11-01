@@ -4,6 +4,7 @@ const installNumberRenewal = require('./renew-numbers');
 const { Client, GatewayIntentBits, ActivityType, SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, MessageFlags } = require('discord.js');
 
 const ENV = process.env;
+const DUTY_LOG_CHANNEL_ID = '1374101456684056726';
 if (!ENV.DISCORD_TOKEN) { console.error('DISCORD_TOKEN is missing'); process.exit(1); }
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 const BANNER = 'https://cdn.discordapp.com/attachments/1374091464123879535/1566496926931750942/Z.png?ex=6ae8c173&is=6ae76ff3&hm=d823165f45fe02f7b30fcb2ded581ac21563dd4f0c4e79fc0f37ef63d2958d52';
@@ -30,12 +31,12 @@ const commandDefinitions = [
 ];
 async function channel(id) { if (!id) return null; return client.channels.fetch(id).catch(()=>null); }
 async function audit(guildId, userId, kind, total, started, ended) {
- const ch=await channel(ENV.DUTY_LOG_CHANNEL_ID);
+ const ch=await channel(DUTY_LOG_CHANNEL_ID);
  if (!ch || !ch.isTextBased() || ch.guildId!==guildId) throw new Error('DUTY_LOG_CHANNEL_ID geçerli bir metin kanalı olmalı');
  await ch.send({content:'DOJ_DUTY '+JSON.stringify({guildId,userId,kind,total,started,ended}),allowedMentions:{parse:[]}});
 }
 async function loadDuty() {
- const ch=await channel(ENV.DUTY_LOG_CHANNEL_ID); if(!ch || !ch.isTextBased()) {console.warn('DUTY_LOG_CHANNEL_ID not configured');return;}
+ const ch=await channel(DUTY_LOG_CHANNEL_ID); if(!ch || !ch.isTextBased()) {console.warn('DUTY_LOG_CHANNEL_ID not configured');return;}
  let before; const arr=[]; 
  for(let n=0;n<20;n++){const batch=await ch.messages.fetch({limit:100,...(before?{before}:{})});if(!batch.size)break;arr.push(...batch.values());before=batch.last().id;if(batch.size<100)break;}
  for(const msg of arr.reverse()){
