@@ -151,6 +151,50 @@ async function changeStatus(i){
  await main.send({embeds:[card('Dosya durumu • '+num,target==='closed'?'Dosya kapatıldı.':'Dosya itiraza gönderildi.')]});
  await i.editReply('Dosya durumu güncellendi: '+target);
 }
+
+async function recuseJudge(i){
+ const g=i.guild,num=i.options.getString('dosya').toUpperCase(),c=db.get(key(g,num));
+ if(!c||!['active','appeal'].includes(c.status))return i.reply({content:'Dosya bulunamadı.',flags:MessageFlags.Ephemeral});
+ if(c.prosecutor!==i.user.id)return i.reply({content:'Yalnızca dosya savcısı hâkim değişikliği isteyebilir.',flags:MessageFlags.Ephemeral});
+ if(!c.judge?.id)return i.reply({content:'Bu dosyada henüz atanmış hâkim yok. /hakim kullan.',flags:MessageFlags.Ephemeral});
+ const role=process.env.JUDGE_ROLE_ID;
+ if(!role)return i.reply({content:'JUDGE_ROLE_ID eksik.',flags:MessageFlags.Ephemeral});
+ await i.deferReply({flags:MessageFlags.Ephemeral});
+ const available=(await g.members.fetch()).filter(m=>!m.user.bot&&m.roles.cache.has(role)&&m.id!==c.judge.id);
+ if(!available.size)return i.editReply('Farklı bir hâkim bulunamadı.');
+ const newJudge=[...available.values()][Math.floor(Math.random()*available.size)];
+ const former=c.judge;
+ const newRoom=await room(g,c,newJudge.id,'hakim',true);
+ c.judge={id:newJudge.id,channel:newRoom.id};
+ c.judgeHistory=[...(c.judgeHistory||[]),{old:former.id,new:newJudge.id,at:Date.now(),reason:i.options.getString('gerekce')}];
+ await save(g,c);
+ const oldRoom=await g.channels.fetch(former.channel).catch(()=>null);
+ if(oldRoom){await oldRoom.permissionOverwrites.edit(former.id,{ViewChannel:false,SendMessages:false});}
+ const main=await g.channels.fetch(c.shared);
+ await main.send({embeds:[card('Hâkim değişikliği • '+num,'Önceki hâkim: <@'+former.id+'>\nYeni hâkim: <@'+newJudge.id+'>\nGerekçe: '+esc(i.options.getString('gerekce')))]});
+ await i.editReply('Yeni hâkim: <@'+newJudge.id+'> • <#'+newRoom.id+'>');
+}
+async function documentedTransition(i,status){
+ const g=i.guild,num=i.options.getString('dosya').toUpperCase(),c=db.get(key(g,num));
+ if(!c||!['active','appeal','closed'].includes(c.status))return i.reply({content:'Dosya bulunamadı.',flags:MessageFlags.Ephemeral});
+ if(status==='closed'&&!['active','appeal'].includes(c.status))return i.reply({content:'Dosya zaten kapalı.',flags:MessageFlags.Ephemeral});
+ if(status==='appeal'&&!['active','closed'].includes(c.status))return i.reply({content:'Bu dosya zaten itirazda.',flags:MessageFlags.Ephemeral});
+ if(c.prosecutor!==i.user.id&&!i.memberPermissions?.has(P.ManageGuild))return i.reply({content:'Dosya işlem yetkiniz bulunmuyor.',flags:MessageFlags.Ephemeral});
+ const doc=i.options.getAttachment('belge'),reason=i.options.getString('gerekce');
+ if(!doc||!doc.url)return i.reply({content:'Belge yüklemesi zorunludur.',flags:MessageFlags.Ephemeral});
+ await i.deferReply({flags:MessageFlags.Ephemeral});
+ const main=await g.channels.fetch(c.shared);
+ // Record decision and attachment link before moving the case.
+ await main.send({embeds:[card((status==='closed'?'Kapatma Kararı':'İtiraz Dilekçesi')+' • '+num,
+  '**İşlem yapan:** <@'+i.user.id+'>\n**Gerekçe:** '+esc(reason)+'\n**Belge:** ['+esc(doc.name)+']('+doc.url+')')]});
+ const previous=c.status;
+ c.status=status;
+ c.events=[...(c.events||[]),{type:status,by:i.user.id,reason:reason.slice(0,300),document:doc.url,at:Date.now()}].slice(-15);
+ await main.setParent(status==='closed'?C.closed:C.appeal,{lockPermissions:false});
+ try{await save(g,c)}catch(e){c.status=previous;throw e}
+ await i.editReply('İşlem kaydedildi: '+num+' • '+(status==='closed'?'Kapatıldı':'İtiraza gönderildi'));
+}
+
 async function relay(m){
  const c=[...db.entries()].filter(([k,c])=>k.startsWith(m.guild.id+':')&&c.status==='active').map(x=>x[1]).find(c=>c.prosecutorRoom===m.channelId||c.judge?.channel===m.channelId||Object.values(c.participants||{}).some(p=>p.channel===m.channelId));
  if(!c)return;
@@ -181,6 +225,9 @@ async function install(client){
    if(i.isChatInputCommand()&&i.commandName==='dosya-ekle')return addByRegistry(i);
    if(i.isChatInputCommand()&&i.commandName==='hakim')return assignJudge(i);
    if(i.isChatInputCommand()&&i.commandName==='dosya-durum')return changeStatus(i);
+   if(i.isChatInputCommand()&&i.commandName==='reddi-hakim')return recuseJudge(i);
+   if(i.isChatInputCommand()&&i.commandName==='dosya-kapat')return documentedTransition(i,'closed');
+   if(i.isChatInputCommand()&&i.commandName==='itiraz')return documentedTransition(i,'appeal');
   };
   work().catch(async e=>{console.error('Dosya işlemi:',e);const content='Dosya işlemi tamamlanamadı: '+e.message;if(i.deferred||i.replied)await i.editReply(content).catch(()=>{});else await i.reply({content,flags:MessageFlags.Ephemeral}).catch(()=>{})});
  });
