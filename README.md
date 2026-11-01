@@ -93,3 +93,10 @@ Botu davet ederken `bot` ve `applications.commands` scope'larıyla davet et. İl
 - Dosya kayıtları Discord kanal konularına yazılır, bot yeniden başlatılınca yeniden yüklenir. Kanal ve mesaj silinirse kayıtlar kaybolabilir. Üretim ortamında bağımsız veritabanı ve ek dosya yedekleme önerilir.
 - `JUDGE_ROLE_ID` ayarlanmadan hâkim atama komutu çalışmaz.
 - Discord kategori ve kanal sınırları ile konu alanındaki 1024 karakter limiti, çok sayıda kişi/dosya için ek bir veritabanı ihtiyacına yol açabilir.
+
+## Yeni işlem komutları
+- `/reddi-hakim dosya:... gerekce:...`: atanmış savcı, mevcut hâkimden farklı rastgele bir hâkim seçer. Eski hâkimin kendi kanalına erişimi kaldırılır, yeni hâkim için özel kategori/kanal oluşturulur. Bu bir sunucu içi atama işlemidir; yargısal reddi hâkim kararının yerine geçmez.
+- `/dosya-kapat dosya:... gerekce:... belge:<ek>`: kapatma gerekçesi ve karar belgesi zorunludur; belge bağlantısı dosya ana arşivine yazılır.
+- `/itiraz dosya:... gerekce:... belge:<ek>`: itiraz dilekçesi zorunludur; dosya İtiraza Giden Dosyalar kategorisine taşınır.
+- Eski `/dosya-durum` komutu yeni belge zorunluluğunu aşmaması için yeni komut listesinden çıkarıldı.
+- Belgeler Discord CDN bağlantılarıyla kaydedilir. Kritik evrak için ayrıca güvenli, kalıcı yedekleme gerekir.
