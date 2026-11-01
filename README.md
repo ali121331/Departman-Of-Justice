@@ -82,3 +82,14 @@ Botu davet ederken `bot` ve `applications.commands` scope'larıyla davet et. İl
 - Karar verildikten sonra Onay Bekleyen kategorisindeki **inceleme kanalı silinir**. Kabulde belge ve karar önce aktif kanala aktarılır; ret halinde ayrı bir `ret-CA-...` karar kaydı Kapanan Dosyalar kategorisine yazılır.
 - Eski sürümde açılmış dosyaların özel kanalları otomatik taşınmaz; yeni onaylanan dosyalar yeni kategori düzenini kullanır.
 - Silinen inceleme kanalı geri alınamaz. Aktarılmayan mesajlar kaybolabileceğinden gerçek belgeler için yedekleme gerekir.
+
+## Dosya arşivi v2 — kişiye özel erişim (güncel)
+- Aktif dosya kategori ID: `1566555227522474146`. Ana `dosya-...` kanalı yalnızca atanmış savcı ve botun okuyabileceği şekilde oluşturulur (Discord Administrator yetkisi olan sunucu yöneticileri yine erişebilir).
+- Avukat/belge sunan kişi için `doj-avukat-KULLANICI_ID` kategorisi, savcı için `doj-savci-KULLANICI_ID` kategorisi, yeni eklenen personel için `doj-katilimci-KULLANICI_ID` kategorisi açılır.
+- `/dosya-ekle dosya:CA-... sicil:213414 yetki:goruntule|duzenle` komutu yalnızca dosyanın atanmış savcısı tarafından kullanılabilir. Kişi takma adındaki `#` sonrasında bulunan sicil/rozet numarasından bulunur. Kişiye özel kanal ve son 500 kayıt üzerinden geçmiş kopyası oluşturulur.
+- Salt okunur yetki mesaj yazmayı yasaklar. Düzenleme yetkisi kişiye özel kanaldan metin ve ek gönderme yetkisidir; ana savcı arşivindeki mesajları silme/düzenleme yetkisi vermez.
+- `/hakim dosya:CA-...` komutu atanan savcı tarafından çalıştırılır; `JUDGE_ROLE_ID` ENV ile belirlenen rol üyelerinden rastgele hâkim seçer ve kendisine özel `doj-hakim-KULLANICI_ID` kategorisinde kanal açar.
+- Her özel kanaldan gönderilen metin ve ek bağlantıları ana savcı dosyasına aktarılır. Özel kanal mesaj geçmişi Discord üzerinde kalır.
+- Dosya kayıtları Discord kanal konularına yazılır, bot yeniden başlatılınca yeniden yüklenir. Kanal ve mesaj silinirse kayıtlar kaybolabilir. Üretim ortamında bağımsız veritabanı ve ek dosya yedekleme önerilir.
+- `JUDGE_ROLE_ID` ayarlanmadan hâkim atama komutu çalışmaz.
+- Discord kategori ve kanal sınırları ile konu alanındaki 1024 karakter limiti, çok sayıda kişi/dosya için ek bir veritabanı ihtiyacına yol açabilir.
