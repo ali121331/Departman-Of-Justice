@@ -12,7 +12,7 @@ const cases=new Map();
 let task=Promise.resolve();
 const serial=fn=>{const p=task.catch(()=>{}).then(fn);task=p;return p};
 const safe=x=>String(x||'').replace(/[@\r\n]/g,' ').slice(0,1500);
-const record=c=>metaPrefix+JSON.stringify({number:c.number,owner:c.owner,prosecutor:c.prosecutor,status:c.status,review:c.review,shared:c.shared,lawyer:c.lawyer,prosecutorRoom:c.prosecutorRoom,decision:c.decision});
+const record=c=>metaPrefix+JSON.stringify({number:c.number,owner:c.owner,prosecutor:c.prosecutor,status:c.status,review:c.review,shared:c.shared,lawyer:c.lawyer,lawyerCategory:c.lawyerCategory,prosecutorCategory:c.prosecutorCategory,prosecutorRoom:c.prosecutorRoom,decision:c.decision});
 const judge=i=>i.memberPermissions?.has(PermissionFlagsBits.ManageGuild);
 const embed=(title,body)=>new EmbedBuilder().setColor(0x203d67).setTitle(title).setDescription(body).setFooter({text:'Departman Of Justice • Dosya Arşivi'}).setTimestamp();
 const lock=(guild,ids)=>[
@@ -49,7 +49,7 @@ function nextNum(){
  return 'CA-'+yy+'-INT-'+String(max+1).padStart(5,'0');
 }
 async function revise(guild,c){
- const review=await guild.channels.fetch(c.review);
+ const review=c.review?await guild.channels.fetch(c.review).catch(()=>null):null;
  if(review)await review.setTopic(record(c));
  if(c.prosecutorRoom){const room=await guild.channels.fetch(c.prosecutorRoom).catch(()=>null);if(room)await room.setTopic(record(c));}
  if(c.shared){const room=await guild.channels.fetch(c.shared).catch(()=>null);if(room)await room.setTopic(record(c));}
@@ -96,12 +96,18 @@ async function collectEvidence(review, target, prosecutorId, number) {
 async function archiveReview(guild,c) {
  const review=await guild.channels.fetch(c.review).catch(()=>null);
  if(!review)return;
- await review.setParent(CONFIG.closed,{lockPermissions:false});
- await review.permissionOverwrites.edit(guild.roles.everyone,{ViewChannel:false});
- await review.permissionOverwrites.edit(c.prosecutor,{ViewChannel:false});
- await review.setName('karar-'+c.number.toLowerCase());
- await review.setTopic(record(c));
+ await review.delete('Karar ve belgeler aktarıldı; inceleme tamamlandı');
+ c.review=null;
 }
+async function personalCategory(guild,kind,id){
+ const marker='doj-'+kind+'-'+id;
+ await guild.channels.fetch();
+ let cat=guild.channels.cache.find(x=>x.type===ChannelType.GuildCategory&&x.name===marker);
+ if(cat)return cat;
+ return guild.channels.create({name:marker,type:ChannelType.GuildCategory,
+  permissionOverwrites:lock(guild,[id]),reason:'Kişiye özel DOJ dosya kategorisi'});
+}
+
 async function finalize(i,c,decision,reason) {
  if(c.status!=='pending')return i.reply({content:'Dosya zaten karara bağlanmış.',flags:MessageFlags.Ephemeral});
  const guild=i.guild,review=await guild.channels.fetch(c.review);
@@ -112,15 +118,17 @@ async function finalize(i,c,decision,reason) {
    name:'dosya-'+c.number.toLowerCase(),type:ChannelType.GuildText,parent:CONFIG.active,
    permissionOverwrites:lock(guild,[c.owner,c.prosecutor]),
    topic:'Aktif dosya • '+c.number});
+  const lawyerCategory=await personalCategory(guild,'avukat',c.owner);
+  const prosecutorCategory=await personalCategory(guild,'savci',c.prosecutor);
   const lawyer=await guild.channels.create({
-   name:'avukat-'+c.number.toLowerCase(),type:ChannelType.GuildText,parent:CONFIG.active,
+   name:'avukat-'+c.number.toLowerCase(),type:ChannelType.GuildText,parent:lawyerCategory.id,
    permissionOverwrites:lock(guild,[c.owner]),
    topic:'Belge sunan kişi için özel dosya kanalı • '+c.number});
   const prosecutorRoom=await guild.channels.create({
-   name:'savci-'+c.number.toLowerCase(),type:ChannelType.GuildText,parent:CONFIG.active,
+   name:'savci-'+c.number.toLowerCase(),type:ChannelType.GuildText,parent:prosecutorCategory.id,
    permissionOverwrites:lock(guild,[c.prosecutor]),
    topic:'Savcıya özel çalışma kanalı • '+c.number});
-  c.shared=shared.id;c.lawyer=lawyer.id;c.prosecutorRoom=prosecutorRoom.id;
+  c.shared=shared.id;c.lawyer=lawyer.id;c.prosecutorRoom=prosecutorRoom.id;c.lawyerCategory=lawyerCategory.id;c.prosecutorCategory=prosecutorCategory.id;
   target=shared;
   await shared.send({embeds:[embed('Aktif Dosya • '+c.number,'**Belge sunan:** <@'+c.owner+'>\n**Atanan savcı:** <@'+c.prosecutor+'>')]});
   await lawyer.send({embeds:[embed('Belge Sunma • '+c.number,'Buraya gönderilen metin ve belgeler ortak dosyaya aktarılır.')]});
@@ -141,6 +149,7 @@ async function finalize(i,c,decision,reason) {
   '**Savcı:** <@'+i.user.id+'>\n**Gerekçe:** '+safe(reason))]});
  await revise(guild,c);
  await archiveReview(guild,c);
+ await revise(guild,c);
  await i.editReply(decision==='accept'?'Dosya aktif edildi; onay bekleyen inceleme kanalı kapatıldı.':'Dosya reddedildi; inceleme kanalı kapatıldı.');
 }
 async function reviewAction(i) {
@@ -156,11 +165,13 @@ async function reviewAction(i) {
 }
 async function relay(message){
  if(message.author.bot)return;
- const c=[...cases.values()].find(c=>c.status==='active'&&c.lawyer===message.channelId);
+ const c=[...cases.values()].find(c=>c.status==='active'&&
+ (c.lawyer===message.channelId||c.prosecutorRoom===message.channelId));
  if(!c)return;
  const target=await message.guild.channels.fetch(c.shared).catch(()=>null);
  if(!target)return;
- await target.send({embeds:[embed('Dosya '+c.number+' • Yeni Belge/Beyan',fields(message))],allowedMentions:{parse:[]}});
+ const source=c.lawyer===message.channelId?'Avukat':'Savcı';
+ await target.send({embeds:[embed(c.number+' • '+source+' Belge/Beyanı',fields(message))],allowedMentions:{parse:[]}});
  await message.react('✅').catch(()=>{});
 }
 function install(client){
@@ -201,10 +212,7 @@ function install(client){
    const parent=status==='closed'?CONFIG.closed:CONFIG.appeal;
    const main=await i.guild.channels.fetch(item.shared);
    await main.setParent(parent,{lockPermissions:false});
-   if(item.lawyer){
-    const lawyer=await i.guild.channels.fetch(item.lawyer).catch(()=>null);
-    if(lawyer)await lawyer.setParent(parent,{lockPermissions:false});
-   }
+   // Kişiye özel çalışma kanalları kendi kategorilerinde kalır.
    item.status=status;
    await revise(i.guild,item);
    await main.send({embeds:[embed('Dosya durumu • '+num,status==='closed'?'Dosya kapatıldı.':'İtiraz incelemesine gönderildi.')]});
