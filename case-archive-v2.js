@@ -27,6 +27,17 @@ async function scan(g){
   await g.channels.create({name:'belge-sunma',type:ChannelType.GuildText,parent:C.intake,topic:'Dosya ve belge başvurularınızı buraya iletin.'});
  }
 }
+function resolveCase(g,input){
+ const q=String(input||'').trim().toUpperCase();
+ if(!q)return null;
+ const all=[...db.entries()].filter(([k])=>k.startsWith(g.id+':')).map(x=>x[1]);
+ const exact=all.find(c=>c.number===q);
+ if(exact)return exact;
+ if(!/^\d{1,5}$/.test(q))return null;
+ const suffix=String(Number(q)).padStart(5,'0');
+ const matches=all.filter(c=>c.number.endsWith('-'+suffix));
+ return matches.length===1?matches[0]:null;
+}
 async function category(g,kind,id){
  const name='doj-'+kind+'-'+id;
  await g.channels.fetch();
@@ -70,7 +81,7 @@ async function reviewChoice(i){
  await i.showModal(modal);
 }
 async function decision(i){
- const [,type,num]=i.customId.split(':'),g=i.guild,c=db.get(key(g,num));
+ const [,type,num]=i.customId.split(':'),g=i.guild,c=resolveCase(g,num);
  if(!c||c.status!=='pending'||c.prosecutor!==i.user.id)return i.reply({content:'Bu dosya için yetkiniz yok.',flags:MessageFlags.Ephemeral});
  await i.deferReply({flags:MessageFlags.Ephemeral});
  const review=await g.channels.fetch(c.review);
@@ -100,7 +111,7 @@ async function decision(i){
 }
 async function addByRegistry(i){
  const g=i.guild,num=i.options.getString('dosya').toUpperCase(),registry=i.options.getString('sicil'),access=i.options.getString('yetki');
- const c=db.get(key(g,num));if(!c||c.status!=='active')return i.reply({content:'Aktif dosya bulunamadı.',flags:MessageFlags.Ephemeral});
+ const c=resolveCase(g,num);if(!c||c.status!=='active')return i.reply({content:'Aktif dosya bulunamadı.',flags:MessageFlags.Ephemeral});
  if(c.prosecutor!==i.user.id)return i.reply({content:'Yalnızca dosyanın savcısı üye ekleyebilir.',flags:MessageFlags.Ephemeral});
  await i.deferReply({flags:MessageFlags.Ephemeral});
  const members=await g.members.fetch();
@@ -125,7 +136,7 @@ async function addByRegistry(i){
  await i.editReply('Personel eklendi: <@'+member.id+'> • '+(edit?'Düzenleyebilir':'Salt okunur')+' • <#'+channel.id+'>');
 }
 async function assignJudge(i){
- const g=i.guild,num=i.options.getString('dosya').toUpperCase(),c=db.get(key(g,num));
+ const g=i.guild,num=i.options.getString('dosya').toUpperCase(),c=resolveCase(g,num);
  if(!c||c.status!=='active')return i.reply({content:'Aktif dosya bulunamadı.',flags:MessageFlags.Ephemeral});
  if(c.prosecutor!==i.user.id)return i.reply({content:'Atama yalnızca dosyanın savcısı tarafından yapılır.',flags:MessageFlags.Ephemeral});
  const role=process.env.JUDGE_ROLE_ID;
@@ -141,7 +152,7 @@ async function assignJudge(i){
  await save(g,c);await i.editReply('Hâkim atandı: <@'+judge.id+'> • <#'+roomId+'>');
 }
 async function changeStatus(i){
- const g=i.guild,num=i.options.getString('numara').toUpperCase(),target=i.options.getString('durum'),c=db.get(key(g,num));
+ const g=i.guild,num=i.options.getString('numara').toUpperCase(),target=i.options.getString('durum'),c=resolveCase(g,num);
  if(!c||!['active','appeal'].includes(c.status))return i.reply({content:'Bu durumda dosya bulunamadı.',flags:MessageFlags.Ephemeral});
  if(i.user.id!==c.prosecutor&&!i.memberPermissions?.has(P.ManageGuild))return i.reply({content:'Dosya durumunu değiştirme yetkiniz yok.',flags:MessageFlags.Ephemeral});
  await i.deferReply({flags:MessageFlags.Ephemeral});
@@ -153,7 +164,7 @@ async function changeStatus(i){
 }
 
 async function recuseJudge(i){
- const g=i.guild,num=i.options.getString('dosya').toUpperCase(),c=db.get(key(g,num));
+ const g=i.guild,num=i.options.getString('dosya').toUpperCase(),c=resolveCase(g,num);
  if(!c||!['active','appeal'].includes(c.status))return i.reply({content:'Dosya bulunamadı.',flags:MessageFlags.Ephemeral});
  if(c.prosecutor!==i.user.id)return i.reply({content:'Yalnızca dosya savcısı hâkim değişikliği isteyebilir.',flags:MessageFlags.Ephemeral});
  if(!c.judge?.id)return i.reply({content:'Bu dosyada henüz atanmış hâkim yok. /hakim kullan.',flags:MessageFlags.Ephemeral});
@@ -166,30 +177,30 @@ async function recuseJudge(i){
  const former=c.judge;
  const newRoom=await room(g,c,newJudge.id,'hakim',true);
  c.judge={id:newJudge.id,channel:newRoom.id};
- c.judgeHistory=[...(c.judgeHistory||[]),{old:former.id,new:newJudge.id,at:Date.now(),reason:i.options.getString('gerekce')}];
+ c.judgeHistory=[...(c.judgeHistory||[]),{old:former.id,new:newJudge.id,at:Date.now(),reason:i.options.getString('gerekce')||'Gerekçe belirtilmedi'}];
  await save(g,c);
  const oldRoom=await g.channels.fetch(former.channel).catch(()=>null);
  if(oldRoom){await oldRoom.permissionOverwrites.edit(former.id,{ViewChannel:false,SendMessages:false});}
  const main=await g.channels.fetch(c.shared);
- await main.send({embeds:[card('Hâkim değişikliği • '+num,'Önceki hâkim: <@'+former.id+'>\nYeni hâkim: <@'+newJudge.id+'>\nGerekçe: '+esc(i.options.getString('gerekce')))]});
+ await main.send({embeds:[card('Hâkim değişikliği • '+num,'Önceki hâkim: <@'+former.id+'>\nYeni hâkim: <@'+newJudge.id+'>\nGerekçe: '+esc(i.options.getString('gerekce')||'Gerekçe belirtilmedi'))]});
  await i.editReply('Yeni hâkim: <@'+newJudge.id+'> • <#'+newRoom.id+'>');
 }
 async function documentedTransition(i,status){
- const g=i.guild,num=i.options.getString('dosya').toUpperCase(),c=db.get(key(g,num));
+ const g=i.guild,num=i.options.getString('dosya').toUpperCase(),c=resolveCase(g,num);
  if(!c||!['active','appeal','closed'].includes(c.status))return i.reply({content:'Dosya bulunamadı.',flags:MessageFlags.Ephemeral});
  if(status==='closed'&&!['active','appeal'].includes(c.status))return i.reply({content:'Dosya zaten kapalı.',flags:MessageFlags.Ephemeral});
  if(status==='appeal'&&!['active','closed'].includes(c.status))return i.reply({content:'Bu dosya zaten itirazda.',flags:MessageFlags.Ephemeral});
  if(c.prosecutor!==i.user.id&&!i.memberPermissions?.has(P.ManageGuild))return i.reply({content:'Dosya işlem yetkiniz bulunmuyor.',flags:MessageFlags.Ephemeral});
- const doc=i.options.getAttachment('belge'),reason=i.options.getString('gerekce');
- if(!doc||!doc.url)return i.reply({content:'Belge yüklemesi zorunludur.',flags:MessageFlags.Ephemeral});
+ const doc=i.options.getAttachment('belge'),reason=i.options.getString('gerekce')?.trim();
+ if(!reason&&!doc?.url)return i.reply({content:'Gerekçe yaz veya belge ekle. İkisinden biri gerekli.',flags:MessageFlags.Ephemeral});
  await i.deferReply({flags:MessageFlags.Ephemeral});
  const main=await g.channels.fetch(c.shared);
  // Record decision and attachment link before moving the case.
  await main.send({embeds:[card((status==='closed'?'Kapatma Kararı':'İtiraz Dilekçesi')+' • '+num,
-  '**İşlem yapan:** <@'+i.user.id+'>\n**Gerekçe:** '+esc(reason)+'\n**Belge:** ['+esc(doc.name)+']('+doc.url+')')]});
+  '**İşlem yapan:** <@'+i.user.id+'>\n**Gerekçe:** '+esc(reason||'Belgede sunulmuştur')+'\n**Belge:** '+(doc?'['+esc(doc.name)+']('+doc.url+')':'Eklenmedi'))]});
  const previous=c.status;
  c.status=status;
- c.events=[...(c.events||[]),{type:status,by:i.user.id,reason:reason.slice(0,300),document:doc.url,at:Date.now()}].slice(-15);
+ c.events=[...(c.events||[]),{type:status,by:i.user.id,reason:(reason||'').slice(0,300),document:doc?.url||null,at:Date.now()}].slice(-15);
  await main.setParent(status==='closed'?C.closed:C.appeal,{lockPermissions:false});
  try{await save(g,c)}catch(e){c.status=previous;throw e}
  await i.editReply('İşlem kaydedildi: '+num+' • '+(status==='closed'?'Kapatıldı':'İtiraza gönderildi'));
