@@ -42,11 +42,11 @@ async function audit(guildId,userId,kind,total,started,ended) {
   const active=kind==='start';
   const record={guildId,userId,kind,total,started,ended,updatedAt:now};
   const summary=embed('⚖️ Personel Mesai Kaydı',
-    '**Personel:** <@'+userId+'>\\n'+
-    '**Durum:** '+(active?'🟢 Mesaide':'⚪ Mesai tamamlandı')+'\\n'+
+    '**Personel:** <@'+userId+'>\n'+
+    '**Durum:** '+(active?'🟢 Mesaide':'⚪ Mesai tamamlandı')+'\n'+
     '**Toplam mesai:** **'+fmt(total+(active?now-started:0))+'**'+
-    (active?'\\n**Başlangıç:** <t:'+Math.floor(started/1000)+':F>':
-      '\\n**Son mesai:** '+fmt(ended-started)+'\\n**Bitiş:** <t:'+Math.floor(ended/1000)+':F>'));
+    (active?'\n**Başlangıç:** <t:'+Math.floor(started/1000)+':F>':
+      '\n**Son mesai:** '+fmt(ended-started)+'\n**Bitiş:** <t:'+Math.floor(ended/1000)+':F>'));
   // Create the replacement before deleting the old record to avoid data loss.
   const sent=await ch.send({content:'DOJ_DUTY '+JSON.stringify(record),embeds:[summary],allowedMentions:{parse:[]}});
   const old=dutyMessageIds.get(key);
