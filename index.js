@@ -66,7 +66,7 @@ client.on('interactionCreate',async i=>{
    const info=embed('⚖️ California • DOJ / USM Usul ve Görev İlkeleri',
     '**Kurumlar:** CA DOJ eyalet hukuk kurumu; USMS federal kolluk; yargıçlar bağımsız mahkeme mensuplarıdır.\n'+
     '**Usul:** Arama, gözaltı, tutuklama ve delil işlemlerinde hukuki dayanak ve işlem kaydı bulunmalı; tarafsızlık ve savunma hakları korunmalıdır.\n'+
-    '**Disiplin:** Yetki suistimali, sahte mesai, metagaming ve delil uydurmak yasaktır.\n'+
+    '**Disiplin:** Yetki suistimali, sahte mesai, yetkisiz bilgi kullanımı ve delil uydurmak yasaktır.\n'+
     '**Numaralar:** DOJ ve USM için ayrı kurum içi takip numaraları kullanılır; bunlar resmî devlet kimlikleri değildir.\n'+
     '**Detaylı iç tüzük:** https://github.com/ali121331/Departman-Of-Justice/blob/main/CALIFORNIA_POLICY.md');
    return i.reply({embeds:[info],flags:ephemeral});
