@@ -1,6 +1,6 @@
 const {ChannelType,PermissionFlagsBits: P,EmbedBuilder,ActionRowBuilder,ButtonBuilder,ButtonStyle,ModalBuilder,TextInputBuilder,TextInputStyle,MessageFlags}=require('discord.js');
 const C={active:'1566555227522474146',pending:'1566531861239562432',closed:'1566531914595311677',appeal:'1566531950183841852',intake:'1566532560589295657',prosecutor:'1374078438792495145'};
-const tag='DOJCASE|', db=new Map(), busy=new Set();
+const tag='DOJCASE|', db=new Map(), tasks=new Map();
 const key=(g,n)=>g.id+':'+n;
 const esc=t=>String(t||'').replace(/@/g,'＠').slice(0,1600);
 const card=(title,body)=>new EmbedBuilder().setColor(0x20446b).setTitle(title).setDescription(body).setTimestamp();
@@ -21,6 +21,10 @@ async function scan(g){
   const k=key(g,c.number),old=db.get(k);
   // Prefer the canonical shared or decision channel over old review copies.
   if(!old||ch.id===c.shared||(!old.shared&&ch.id===c.review))db.set(k,c);
+ }
+ const intake=g.channels.cache.find(x=>x.parentId===C.intake&&x.name==='belge-sunma');
+ if(!intake && g.channels.cache.get(C.intake)?.type===ChannelType.GuildCategory){
+  await g.channels.create({name:'belge-sunma',type:ChannelType.GuildText,parent:C.intake,topic:'Dosya ve belge başvurularınızı buraya iletin.'});
  }
 }
 async function category(g,kind,id){
@@ -149,15 +153,14 @@ async function install(client){
  client.on('guildCreate',g=>scan(g).catch(console.error));
  client.on('messageCreate',m=>{
   if(!m.guild||m.author.bot)return;
-  const work=async()=>{
-   if(m.channel.parentId===C.intake&&m.channel.name==='belge-sunma'&&(m.content||m.attachments.size))return filing(m);
-   return relay(m);
-  };
-  if(busy.has(m.guild.id))return work().catch(console.error);
-  // Serialize new case numbering to avoid collisions.
-  if(m.channel.parentId===C.intake&&m.channel.name==='belge-sunma'){
-   busy.add(m.guild.id);work().catch(console.error).finally(()=>busy.delete(m.guild.id));
-  }else work().catch(console.error);
+  const intake=m.channel.parentId===C.intake&&m.channel.name==='belge-sunma';
+  if(intake&&!(m.content||m.attachments.size))return;
+  if(intake){
+   const prev=tasks.get(m.guild.id)||Promise.resolve();
+   const work=prev.catch(()=>{}).then(()=>filing(m));
+   tasks.set(m.guild.id,work);
+   work.catch(e=>console.error('Dosya açılışı:',e)).finally(()=>{if(tasks.get(m.guild.id)===work)tasks.delete(m.guild.id)});
+  }else relay(m).catch(e=>console.error('Belge aktarımı:',e));
  });
  client.on('interactionCreate',i=>{
   if(!i.inGuild())return;
