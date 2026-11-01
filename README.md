@@ -36,15 +36,15 @@ Botu davet ederken `bot` ve `applications.commands` scope'larıyla davet et. İl
 - Discord uygulama ikonunu ve banner'ını kod değişikliğiyle ayarlamak yerine Discord Developer Portal'dan yükleyin.
 
 ## DOJ / USM otomatik numara ve IC isim
-- DOJ rolü: `1566506941705101384` → 6 haneli benzersiz RP sicil numarası (`#100000` gibi).
-- USM rolü: `1566506899116134501` → 5 haneli RP rozet numarası; iki son rakam birbirinin aynı veya ardışığı olamaz; başka USM üyesinin son iki hanesi de aynı olamaz.
+- DOJ rolü: `1566506941705101384` → 6 haneli benzersiz kurum içi sicil numarası (`#100000` gibi).
+- USM rolü: `1566506899116134501` → 5 haneli kurum içi rozet numarası; iki son rakam birbirinin aynı veya ardışığı olamaz; başka USM üyesinin son iki hanesi de aynı olamaz.
 - IC isim kanalı: `1374086832941174844`. Kullanıcı kendi IC adını bu kanala mesaj olarak yazar; bot takma adını değiştirirken mevcut `#` numarasını korur.
 - `/numara-tara` mevcut rol üyelerini tarar, numarası olmayanlara atama yapar. Var olan numaraları değiştirmez.
 - Rolü sonradan verilen personele otomatik numara atanır.
 - Discord Developer Portal > Bot > **Server Members Intent** ve **Message Content Intent** açılmalı.
 - Botun rolü, numaralandırılacak kişilerin rollerinden yukarıda olmalı ve **Manage Nicknames / Takma Adları Yönet** iznine sahip olmalı.
 - USM son iki hane kısıtları nedeniyle uygun çift sayısı sınırlıdır; kapasite dolarsa bot yeni numara atamaz.
-- Numaralar sunucu içindeki kurgusal RP kimlikleridir, resmî sicil numaraları değildir.
+- Numaralar sunucu içindeki kurgusal kurum içi kimlikleridir, resmî sicil numaraları değildir.
 
 ## Rastgele numara üretimi (güncel)
 - USM: Rastgele **5 haneli** badge number. Son iki hane ne kendi içinde aynı ne de art arda rakam olabilir; başka USM personelinin son iki hanesiyle çakışamaz. Üçlü artan/azalan rakam dizilerinden de kaçınılır.
