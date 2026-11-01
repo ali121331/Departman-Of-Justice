@@ -1,6 +1,6 @@
 const http = require('node:http');
 const numbering = require('./numbering');
-const caseArchive = require('./case-archive');
+const caseArchive = require('./case-archive-v2');
 const installNumberRenewal = require('./renew-numbers');
 const { Client, GatewayIntentBits, ActivityType, SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, MessageFlags } = require('discord.js');
 
@@ -25,6 +25,8 @@ const appRow = () => new ActionRowBuilder().addComponents(btn('apply:open','Baş
 const commandDefinitions = [
  new SlashCommandBuilder().setName('panel').setDescription('Departman panellerini gönderir').addStringOption(o=>o.setName('tür').setDescription('Panel türü').setRequired(true).addChoices({name:'Mesai',value:'mesai'},{name:'Başvuru',value:'basvuru'})).setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('mesai').setDescription('Kendi mesai durumun').addUserOption(o=>o.setName('üye').setDescription('Yetkililer başka üyeyi görebilir')),
+ new SlashCommandBuilder().setName('dosya-ekle').setDescription('Sicil numarası ile dosyaya personel ekle').addStringOption(o=>o.setName('dosya').setDescription('Dosya numarası').setRequired(true)).addStringOption(o=>o.setName('sicil').setDescription('Kişinin # sonrası sicil/rozet numarası').setRequired(true)).addStringOption(o=>o.setName('yetki').setDescription('Dosyaya erişim yetkisi').setRequired(true).addChoices({name:'Salt okunur',value:'goruntule'},{name:'Belge ve metin ekleyebilir',value:'duzenle'})),
+ new SlashCommandBuilder().setName('hakim').setDescription('Dosyaya rastgele hâkim ata').addStringOption(o=>o.setName('dosya').setDescription('Dosya numarası').setRequired(true)),
  new SlashCommandBuilder().setName('dosya-durum').setDescription('Dosyayı kapat veya itiraza gönder').addStringOption(o=>o.setName('numara').setDescription('Dosya numarası').setRequired(true)).addStringOption(o=>o.setName('durum').setDescription('Yeni durum').setRequired(true).addChoices({name:'Kapat',value:'closed'},{name:'İtiraza gönder',value:'appeal'})),
  new SlashCommandBuilder().setName('kurallar').setDescription('California DOJ ve USM görev ve usul ilkeleri'),
  new SlashCommandBuilder().setName('numara-yenile').setDescription('DOJ ve USM numaralarını topluca yenile').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
