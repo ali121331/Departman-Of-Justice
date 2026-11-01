@@ -1,0 +1,16 @@
+{
+  "name": "departman-of-justice",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Department of Justice Discord bot - Render Web Service",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=20 <25"
+  },
+  "dependencies": {
+    "discord.js": "^14.22.1"
+  }
+}
