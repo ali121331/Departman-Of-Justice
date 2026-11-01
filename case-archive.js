@@ -134,7 +134,11 @@ async function finalize(i,c,decision,reason) {
   await lawyer.send({embeds:[embed('Belge Sunma • '+c.number,'Buraya gönderilen metin ve belgeler ortak dosyaya aktarılır.')]});
   await prosecutorRoom.send({embeds:[embed('Savcı İşlem Kanalı • '+c.number,'Savcı inceleme ve dosya hazırlık işlemleri bu kanalda yürütülür.')]});
  }else{
-  target=review;
+  target=await guild.channels.create({
+   name:'ret-'+c.number.toLowerCase(),type:ChannelType.GuildText,parent:CONFIG.closed,
+   permissionOverwrites:lock(guild,[c.prosecutor]),
+   topic:'Ret kararı • '+c.number});
+  c.shared=target.id;
  }
  c.decision={type:decision,reason,by:i.user.id,at:Date.now()};
  c.status=decision==='accept'?'active':'rejected';
@@ -150,7 +154,7 @@ async function finalize(i,c,decision,reason) {
  await revise(guild,c);
  await archiveReview(guild,c);
  await revise(guild,c);
- await i.editReply(decision==='accept'?'Dosya aktif edildi; onay bekleyen inceleme kanalı kapatıldı.':'Dosya reddedildi; inceleme kanalı kapatıldı.');
+ await i.editReply(decision==='accept'?'Dosya aktif edildi; inceleme kanalı silindi.':'Dosya reddedildi; karar kaydı saklandı ve inceleme kanalı silindi.');
 }
 async function reviewAction(i) {
  const [,decision,number]=i.customId.split(':');
