@@ -77,16 +77,20 @@ async function reviewChoice(i){
  const [,decision,num]=i.customId.split(':');const c=db.get(key(i.guild,num));
  if(!c||c.status!=='pending'||i.channelId!==c.review||i.user.id!==c.prosecutor)return i.reply({content:'Bu dosyada yetkili değilsiniz.',flags:MessageFlags.Ephemeral});
  const modal=new ModalBuilder().setCustomId('filedecision:'+decision+':'+num).setTitle('Dosya kararı');
- modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('reason').setLabel('Karar gerekçesi').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(1300)));
+ modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('reason').setLabel('Gerekçe (veya kanala belge yükleyin)').setStyle(TextInputStyle.Paragraph).setRequired(false).setMaxLength(1300)));
  await i.showModal(modal);
 }
 async function decision(i){
  const [,type,num]=i.customId.split(':'),g=i.guild,c=resolveCase(g,num);
  if(!c||c.status!=='pending'||c.prosecutor!==i.user.id)return i.reply({content:'Bu dosya için yetkiniz yok.',flags:MessageFlags.Ephemeral});
- await i.deferReply({flags:MessageFlags.Ephemeral});
  const review=await g.channels.fetch(c.review);
+ const reason=i.fields.getTextInputValue('reason')?.trim();
+ const recent=await review.messages.fetch({limit:100});
+ const evidence=[...recent.values()].filter(m=>m.author.id===i.user.id&&m.attachments.size>0);
+ if(!reason&&!evidence.length)return i.reply({content:'Karar gerekçesi yazın veya inceleme kanalına belge yükleyin. En az biri gerekli.',flags:MessageFlags.Ephemeral});
+ await i.deferReply({flags:MessageFlags.Ephemeral});
  const main=await g.channels.create({name:(type==='yes'?'dosya-':'ret-')+num.toLowerCase(),type:ChannelType.GuildText,parent:type==='yes'?C.active:C.closed,permissionOverwrites:perms(g,c.prosecutor),topic:'Dosya '+num});
- c.shared=main.id;c.status=type==='yes'?'active':'rejected';c.decision={by:i.user.id,reason:i.fields.getTextInputValue('reason'),time:Date.now(),type};
+ c.shared=main.id;c.status=type==='yes'?'active':'rejected';c.decision={by:i.user.id,reason:reason||'Belge sunuldu',time:Date.now(),type};
  await main.send({embeds:[card('Dosya '+num+' • Karar','Savcı: <@'+c.prosecutor+'>\nKarar: '+(type==='yes'?'Kabul':'Red')+'\nGerekçe: '+esc(c.decision.reason))]});
  // Preserve review messages and attachment links before deleting the review channel.
  let before;
@@ -168,6 +172,9 @@ async function recuseJudge(i){
  if(!c||!['active','appeal'].includes(c.status))return i.reply({content:'Dosya bulunamadı.',flags:MessageFlags.Ephemeral});
  if(c.prosecutor!==i.user.id)return i.reply({content:'Yalnızca dosya savcısı hâkim değişikliği isteyebilir.',flags:MessageFlags.Ephemeral});
  if(!c.judge?.id)return i.reply({content:'Bu dosyada henüz atanmış hâkim yok. /hakim kullan.',flags:MessageFlags.Ephemeral});
+ const reason=i.options.getString('gerekce')?.trim();
+ const document=i.options.getAttachment('belge');
+ if(!reason&&!document?.url)return i.reply({content:'Gerekçe veya belge zorunludur.',flags:MessageFlags.Ephemeral});
  const role=process.env.JUDGE_ROLE_ID;
  if(!role)return i.reply({content:'JUDGE_ROLE_ID eksik.',flags:MessageFlags.Ephemeral});
  await i.deferReply({flags:MessageFlags.Ephemeral});
@@ -177,12 +184,12 @@ async function recuseJudge(i){
  const former=c.judge;
  const newRoom=await room(g,c,newJudge.id,'hakim',true);
  c.judge={id:newJudge.id,channel:newRoom.id};
- c.judgeHistory=[...(c.judgeHistory||[]),{old:former.id,new:newJudge.id,at:Date.now(),reason:i.options.getString('gerekce')||'Gerekçe belirtilmedi'}];
+ c.judgeHistory=[...(c.judgeHistory||[]),{old:former.id,new:newJudge.id,at:Date.now(),reason:reason||'Belge sunuldu',document:document?.url||null}];
  await save(g,c);
  const oldRoom=await g.channels.fetch(former.channel).catch(()=>null);
  if(oldRoom){await oldRoom.permissionOverwrites.edit(former.id,{ViewChannel:false,SendMessages:false});}
  const main=await g.channels.fetch(c.shared);
- await main.send({embeds:[card('Hâkim değişikliği • '+num,'Önceki hâkim: <@'+former.id+'>\nYeni hâkim: <@'+newJudge.id+'>\nGerekçe: '+esc(i.options.getString('gerekce')||'Gerekçe belirtilmedi'))]});
+ await main.send({embeds:[card('Hâkim değişikliği • '+num,'Önceki hâkim: <@'+former.id+'>\nYeni hâkim: <@'+newJudge.id+'>\nGerekçe: '+esc(reason||'Belge sunuldu')+'\nBelge: '+(document?'['+esc(document.name)+']('+document.url+')':'Yok'))]});
  await i.editReply('Yeni hâkim: <@'+newJudge.id+'> • <#'+newRoom.id+'>');
 }
 async function documentedTransition(i,status){
