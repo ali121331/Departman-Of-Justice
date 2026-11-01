@@ -70,8 +70,8 @@ async function filing(m){
  const c={number,owner:m.author.id,prosecutor:prosecutor.id,status:'pending',review:review.id,shared:null,participants:{},judge:null,decision:null};
  await save(g,c);
  const buttons=new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('file:yes:'+number).setLabel('Kabul').setStyle(ButtonStyle.Success),new ButtonBuilder().setCustomId('file:no:'+number).setLabel('Red').setStyle(ButtonStyle.Danger));
- await review.send({embeds:[card('Dosya '+number,statement(m))],components:[buttons]});
- await m.reply({content:'Başvurunuz kaydedildi. Dosya numarası: **'+number+'**',allowedMentions:{repliedUser:false}});
+ await review.send({embeds:[card('Dosya '+number,'**Atanan savcı:** <@'+prosecutor.id+'>\n**Başvuru sahibi:** <@'+m.author.id+'>\n\n'+statement(m))],components:[buttons],allowedMentions:{parse:[]}});
+ await m.reply({content:'Başvurunuz kaydedildi. **Dosya numarası:** '+number+'\n**Atanan savcı:** <@'+prosecutor.id+'>',allowedMentions:{repliedUser:false,users:[]}});
 }
 async function reviewChoice(i){
  const [,decision,num]=i.customId.split(':');const c=db.get(key(i.guild,num));
