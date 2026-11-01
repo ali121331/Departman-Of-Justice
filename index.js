@@ -1,5 +1,6 @@
 const http = require('node:http');
 const numbering = require('./numbering');
+const installNumberRenewal = require('./renew-numbers');
 const { Client, GatewayIntentBits, ActivityType, SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, MessageFlags } = require('discord.js');
 
 const ENV = process.env;
@@ -22,6 +23,7 @@ const appRow = () => new ActionRowBuilder().addComponents(btn('apply:open','Baş
 const commandDefinitions = [
  new SlashCommandBuilder().setName('panel').setDescription('Departman panellerini gönderir').addStringOption(o=>o.setName('tür').setDescription('Panel türü').setRequired(true).addChoices({name:'Mesai',value:'mesai'},{name:'Başvuru',value:'basvuru'})).setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('mesai').setDescription('Kendi mesai durumun').addUserOption(o=>o.setName('üye').setDescription('Yetkililer başka üyeyi görebilir')),
+ new SlashCommandBuilder().setName('numara-yenile').setDescription('DOJ ve USM numaralarını topluca yenile').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('numara-tara').setDescription('DOJ ve USM üyelerine eksik numaraları verir').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('mesai-liste').setDescription('Aktif mesaileri listeler').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
 ];
@@ -131,6 +133,7 @@ client.on('interactionCreate',async i=>{
  }catch(e){console.error('Interaction failed:',e);if(i.replied||i.deferred)await i.followUp({content:'İşlem başarısız oldu. Ayarları ve yetkileri kontrol edin.',flags:ephemeral}).catch(()=>{});else await i.reply({content:'İşlem başarısız oldu. Ayarları ve yetkileri kontrol edin.',flags:ephemeral}).catch(()=>{});}
 });
 numbering.install(client);
+installNumberRenewal(client);
 client.on('error',e=>console.error('Discord:',e));
 client.login(ENV.DISCORD_TOKEN).catch(e=>{console.error('Login failed:',e);process.exit(1);});
 process.on('SIGTERM',()=>{client.destroy();srv.close();});
