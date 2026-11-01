@@ -1,9 +1,10 @@
 const http = require('node:http');
+const numbering = require('./numbering');
 const { Client, GatewayIntentBits, ActivityType, SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, MessageFlags } = require('discord.js');
 
 const ENV = process.env;
 if (!ENV.DISCORD_TOKEN) { console.error('DISCORD_TOKEN is missing'); process.exit(1); }
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 const BANNER = 'https://cdn.discordapp.com/attachments/1374091464123879535/1566496926931750942/Z.png?ex=6ae8c173&is=6ae76ff3&hm=d823165f45fe02f7b30fcb2ded581ac21563dd4f0c4e79fc0f37ef63d2958d52';
 const LOGO = 'https://cdn.discordapp.com/attachments/1374091464123879535/1566497126354255922/images.png?ex=6ae8c1a3&is=6ae77023&hm=1c38cc6797053f860fcc866cb471211c2741db9ec59a5dc5b4fbbcb6970b1fe1';
 const color = 0x173b63;
@@ -21,6 +22,7 @@ const appRow = () => new ActionRowBuilder().addComponents(btn('apply:open','Baş
 const commandDefinitions = [
  new SlashCommandBuilder().setName('panel').setDescription('Departman panellerini gönderir').addStringOption(o=>o.setName('tür').setDescription('Panel türü').setRequired(true).addChoices({name:'Mesai',value:'mesai'},{name:'Başvuru',value:'basvuru'})).setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('mesai').setDescription('Kendi mesai durumun').addUserOption(o=>o.setName('üye').setDescription('Yetkililer başka üyeyi görebilir')),
+ new SlashCommandBuilder().setName('numara-tara').setDescription('DOJ ve USM üyelerine eksik numaraları verir').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
  new SlashCommandBuilder().setName('mesai-liste').setDescription('Aktif mesaileri listeler').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
 ];
 async function channel(id) { if (!id) return null; return client.channels.fetch(id).catch(()=>null); }
@@ -128,6 +130,7 @@ client.on('interactionCreate',async i=>{
  }
  }catch(e){console.error('Interaction failed:',e);if(i.replied||i.deferred)await i.followUp({content:'İşlem başarısız oldu. Ayarları ve yetkileri kontrol edin.',flags:ephemeral}).catch(()=>{});else await i.reply({content:'İşlem başarısız oldu. Ayarları ve yetkileri kontrol edin.',flags:ephemeral}).catch(()=>{});}
 });
+numbering.install(client);
 client.on('error',e=>console.error('Discord:',e));
 client.login(ENV.DISCORD_TOKEN).catch(e=>{console.error('Login failed:',e);process.exit(1);});
 process.on('SIGTERM',()=>{client.destroy();srv.close();});
