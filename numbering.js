@@ -51,7 +51,7 @@ async function assignMember(member,members){
   const base=(member.nickname||member.user.globalName||member.user.username).trim().replace(/\s+#\d{5,6}$/,'');
   const suffix=' #'+number;
   if(base.length+suffix.length>32)return 'length';
-  await member.setNickname(base+suffix,'DOJ / USM RP number assigned automatically');
+  await member.setNickname(base+suffix,'DOJ / USM kurum içi number assigned automatically');
   return number;
 }
 function install(client){
