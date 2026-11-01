@@ -3,7 +3,7 @@ const DOJ_ROLE_ID='1566506941705101384';
 const USM_ROLE_ID='1566506899116134501';
 const IC_CHANNEL_ID='1374086832941174844';
 const locks=new Map();
-const numberPattern=/#(\d{5,6})(?!\d)/;
+const numberPattern=/#(\d{5,6})$/;
 function queue(guild,job){
   const previous=locks.get(guild.id)||Promise.resolve();
   const current=previous.catch(()=>{}).then(job);
@@ -72,13 +72,13 @@ function install(client){
     const member=await message.guild.members.fetch(message.author.id).catch(()=>null);
     if(!member)return;
     const name=message.content.trim().replace(/\s+/g,' ');
-    if(!name||name.length>28||name.includes('#')||/[@\n\r]/.test(name))return;
+    if(!name||name.includes('#')||/[@\n\r]/.test(name))return;
     await queue(message.guild,async()=>{
       const latest=await message.guild.members.fetch(member.id);
       const number=existingNumber(latest);
       const suffix=number?' #'+number:'';
       const newName=name+suffix;
-      if(newName.length>32||!latest.manageable)return;
+      if(newName.length>32||!latest.manageable){await message.react('❌').catch(()=>{});return;}
       await latest.setNickname(newName,'IC name channel update; preserves number');
       // An IC name update can precede a role assignment.
       if(!number&&isQualified(latest)){
