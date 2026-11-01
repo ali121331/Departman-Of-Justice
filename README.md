@@ -51,3 +51,17 @@ Botu davet ederken `bot` ve `applications.commands` scope'larıyla davet et. İl
 - DOJ: Rastgele **6 haneli** sicil numarası. Tek kural başka DOJ personelinin siciliyle aynı olmamasıdır.
 - Sistemler ayrı değerlendirilir. İki role birden sahip üyelerde takma ad için USM önceliklidir.
 - Daha önceden # ile atanmış numaralar otomatik değiştirilmez. Yeni numaralar rol atandığında veya /numara-tara ile verilir.
+
+## Dosya arşiv sistemi (California düzeni)
+- **Belge Sunma kategori:** `1566532560589295657` → bot kategori içinde `#belge-sunma` kanalı oluşturur. Bu kanala belge veya metin göndermek dosya açar.
+- **Onay Bekleyen Dosyalar:** `1566531861239562432` → yalnızca atanmış savcıya açık özel inceleme kanalı.
+- **Aktif Dosyalar:** `1566531570377039955` → savcı ile belge sunan kişinin görebildiği ortak dosya kanalı; ayrıca belge sunan kişi için ayrı özel kanal.
+- **Kapanan Dosyalar:** `1566531914595311677` → `/dosya-durum` ile aktif dosyayı taşır.
+- **İtiraza Giden Dosyalar:** `1566531950183841852` → `/dosya-durum` ile taşır.
+- **Savcı rol ID:** `1374078438792495145`, atama uygun roldeki üyeler arasından rastgeledir.
+- Her dosya `CA-26-INT-00001` biçiminde benzersiz kurum içi takip numarası alır. California mahkemesinin gerçek dava numarası değildir.
+- Savcı inceleme kanalındaki kabul/red butonlarıyla işlem yapar. Kabulde ortak aktif kanal ve belgeyi sunan kişiye özel kanal açılır. Özel kanala gelen sonraki yazılar ortak kanala aktarılır.
+- `/dosya-durum numara:<numara> durum:Kapat` veya `İtiraza gönder`, atanmış savcı veya sunucu yönetimi kullanabilir.
+- Kayıtlar inceleme kanalının topic alanında tutulur; yeniden başlatıldığında buradan yüklenir. Kategorileri ve inceleme kanallarını silmeyin.
+- Botta **Manage Channels, View Channel, Send Messages, Read Message History, Attach Files, Manage Roles** (ayrı sistemler için) yetkileri gerekir. Savcı rolünün üzerinde bot rolü bulunması tavsiye edilir.
+- Orijinal Discord belge bağlantılarının geçerliliği değişebilir; kritik kayıtların yedeklenmesi gerekir.
