@@ -61,7 +61,7 @@ async function save(g,c){
 }
 function statement(m){const attachments=[...m.attachments.values()].map(a=>'['+esc(a.name)+']('+a.url+')').join('\n');return '**Gönderen:** <@'+m.author.id+'>\n**Metin:** '+esc(m.content||'Belge')+'\n**Ekler:**\n'+(attachments||'Yok')}
 async function commandFiling(i){
- const attachment=i.options.getAttachment('belge'),description=i.options.getString('aciklama')?.trim();
+ const attachment=i.options.getAttachment('belge'),description=i.options.getString('aciklama')?.trim(),source=i.options.getString('kaynak')?.trim();
  if(!attachment&&!description)return i.reply({content:'Belge veya açıklamadan en az birini gir.',flags:MessageFlags.Ephemeral});
  await i.deferReply({flags:MessageFlags.Ephemeral});
  const g=i.guild;
@@ -76,9 +76,23 @@ async function commandFiling(i){
  const c={number,owner:i.user.id,prosecutor:prosecutor.id,status:'pending',review:review.id,shared:null,participants:{},judge:null,decision:null,noLawyer:true};
  await save(g,c);
  const buttons=new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('file:yes:'+number).setLabel('Kabul').setStyle(ButtonStyle.Success),new ButtonBuilder().setCustomId('file:no:'+number).setLabel('Red').setStyle(ButtonStyle.Danger));
- const body='**Atanan savcı:** <@'+prosecutor.id+'>\n**Atama yöntemi:** '+(selected?'Elle seçim':'Rastgele')+'\n**Sunan:** <@'+i.user.id+'>\n**Açıklama:** '+esc(description||'Belge sunuldu')+'\n**Ek:** '+(attachment?'['+esc(attachment.name)+']('+attachment.url+')':'Yok');
+ const body='**Atanan savcı:** <@'+prosecutor.id+'>\n**Atama yöntemi:** '+(selected?'Elle seçim':'Rastgele')+'\n**Belgenin kaynağı (beyan):** '+esc(source)+'\n**Sisteme kaydeden:** <@'+i.user.id+'>\n**Açıklama:** '+esc(description||'Belge sunuldu')+'\n**Ek:** '+(attachment?'['+esc(attachment.name)+']('+attachment.url+')':'Yok');
  await review.send({embeds:[card('Dosya '+number,body)],components:[buttons],allowedMentions:{parse:[]}});
  await i.editReply('Belge sunuldu. **Dosya:** '+number+' • **Atanan savcı:** <@'+prosecutor.id+'> • **Atama:** '+(selected?'Elle':'Rastgele')+'. Avukat kanalı açılmayacak.');
+}
+async function addCaseDocument(i){
+ const num=i.options.getString('dosya'),source=i.options.getString('kaynak')?.trim();
+ const file=i.options.getAttachment('belge'),description=i.options.getString('aciklama')?.trim();
+ if(!file&&!description)return i.reply({content:'Belge veya açıklamadan en az birini gönder.',flags:MessageFlags.Ephemeral});
+ const c=resolveCase(i.guild,num);
+ if(!c||!c.shared||!['active','appeal'].includes(c.status))return i.reply({content:'Aktif veya itirazdaki dosya bulunamadı.',flags:MessageFlags.Ephemeral});
+ const permitted=i.user.id===c.prosecutor||i.user.id===c.judge?.id||i.memberPermissions?.has(P.ManageGuild)||Object.entries(c.participants||{}).some(([id,p])=>id===i.user.id&&p.edit);
+ if(!permitted)return i.reply({content:'Bu dosyaya belge ekleme yetkiniz yok.',flags:MessageFlags.Ephemeral});
+ await i.deferReply({flags:MessageFlags.Ephemeral});
+ const main=await i.guild.channels.fetch(c.shared);
+ const text='**Belge kaynağı (beyan):** '+esc(source)+'\n**Sisteme kaydeden:** <@'+i.user.id+'>\n**Açıklama:** '+esc(description||'Belge sunuldu')+'\n**Ek:** '+(file?'['+esc(file.name)+']('+file.url+')':'Yok');
+ await main.send({embeds:[card('Dosyaya Yeni Belge • '+c.number,text)],allowedMentions:{parse:[]}});
+ await i.editReply('Belge '+c.number+' dosyasına kaydedildi. Kaynak: '+esc(source));
 }
 async function filing(m){
  const g=m.guild;
@@ -262,6 +276,7 @@ async function install(client){
    if(i.isModalSubmit()&&i.customId.startsWith('filedecision:'))return decision(i);
    if(i.isChatInputCommand()&&i.commandName==='dosya-ekle')return addByRegistry(i);
    if(i.isChatInputCommand()&&i.commandName==='belge-sun')return commandFiling(i);
+   if(i.isChatInputCommand()&&i.commandName==='dosyaya-belge')return addCaseDocument(i);
    if(i.isChatInputCommand()&&i.commandName==='hakim')return assignJudge(i);
    if(i.isChatInputCommand()&&i.commandName==='dosya-durum')return changeStatus(i);
    if(i.isChatInputCommand()&&i.commandName==='reddi-hakim')return recuseJudge(i);
