@@ -30,23 +30,60 @@ const commandDefinitions = [
  new SlashCommandBuilder().setName('mesai-liste').setDescription('Aktif mesaileri listeler').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
 ];
 async function channel(id) { if (!id) return null; return client.channels.fetch(id).catch(()=>null); }
-async function audit(guildId, userId, kind, total, started, ended) {
+const dutyMessageIds = new Map();
+const dutyLocks = new Map();
+async function audit(guildId,userId,kind,total,started,ended) {
  const ch=await channel(DUTY_LOG_CHANNEL_ID);
- if (!ch || !ch.isTextBased() || ch.guildId!==guildId) throw new Error('DUTY_LOG_CHANNEL_ID geçerli bir metin kanalı olmalı');
- await ch.send({content:'DOJ_DUTY '+JSON.stringify({guildId,userId,kind,total,started,ended}),allowedMentions:{parse:[]}});
+ if(!ch || !ch.isTextBased() || ch.guildId!==guildId)throw new Error('Mesai log kanalı bulunamadı');
+ const key=guildId+':'+userId;
+ const previous=dutyLocks.get(key)||Promise.resolve();
+ const job=previous.catch(()=>{}).then(async()=>{
+  const now=Date.now();
+  const active=kind==='start';
+  const record={guildId,userId,kind,total,started,ended,updatedAt:now};
+  const summary=embed('⚖️ Personel Mesai Kaydı',
+    '**Personel:** <@'+userId+'>\\n'+
+    '**Durum:** '+(active?'🟢 Mesaide':'⚪ Mesai tamamlandı')+'\\n'+
+    '**Toplam mesai:** **'+fmt(total+(active?now-started:0))+'**'+
+    (active?'\\n**Başlangıç:** <t:'+Math.floor(started/1000)+':F>':
+      '\\n**Son mesai:** '+fmt(ended-started)+'\\n**Bitiş:** <t:'+Math.floor(ended/1000)+':F>'));
+  // Create the replacement before deleting the old record to avoid data loss.
+  const sent=await ch.send({content:'DOJ_DUTY '+JSON.stringify(record),embeds:[summary],allowedMentions:{parse:[]}});
+  const old=dutyMessageIds.get(key);
+  dutyMessageIds.set(key,sent.id);
+  if(old&&old!==sent.id){
+   await ch.messages.delete(old).catch(e=>console.warn('Eski mesai kaydı silinemedi:',e.message));
+  }
+ });
+ dutyLocks.set(key,job);
+ try{await job}finally{if(dutyLocks.get(key)===job)dutyLocks.delete(key)}
 }
 async function loadDuty() {
- const ch=await channel(DUTY_LOG_CHANNEL_ID); if(!ch || !ch.isTextBased()) {console.warn('DUTY_LOG_CHANNEL_ID not configured');return;}
- let before; const arr=[]; 
- for(let n=0;n<20;n++){const batch=await ch.messages.fetch({limit:100,...(before?{before}:{})});if(!batch.size)break;arr.push(...batch.values());before=batch.last().id;if(batch.size<100)break;}
- for(const msg of arr.reverse()){
-  if(msg.author.id!==client.user.id || !msg.content.startsWith('DOJ_DUTY '))continue;
-  try{const a=JSON.parse(msg.content.slice(9));const key=a.guildId+':'+a.userId;
-   if(a.kind==='start'){sessions.set(key,a.started);}
-   else if(a.kind==='end'){sessions.delete(key);totals.set(key,a.total);}
-  }catch{}
+ const ch=await channel(DUTY_LOG_CHANNEL_ID);
+ if(!ch||!ch.isTextBased()){console.warn('Mesai log kanalı bulunamadı');return}
+ let before;const arr=[];
+ for(let n=0;n<20;n++){
+  const batch=await ch.messages.fetch({limit:100,...(before?{before}:{})});
+  if(!batch.size)break;
+  arr.push(...batch.values());before=batch.last().id;
+  if(batch.size<100)break;
  }
- console.log('Recovered duty data:',totals.size,'totals,',sessions.size,'active');
+ for(const msg of arr.reverse()){
+  if(msg.author.id!==client.user.id||!msg.content.startsWith('DOJ_DUTY '))continue;
+  try{
+   const a=JSON.parse(msg.content.slice(9));
+   const key=a.guildId+':'+a.userId;
+   if(a.kind==='start'){
+    sessions.set(key,a.started);
+    if(Number.isFinite(a.total))totals.set(key,a.total);
+   }else if(a.kind==='end'){
+    sessions.delete(key);
+    totals.set(key,a.total);
+   }
+   dutyMessageIds.set(key,msg.id);
+  }catch(e){console.warn('Mesai verisi okunamadı:',e.message)}
+ }
+ console.log('Mesai kayıtları yüklendi:',totals.size,'toplam,',sessions.size,'aktif');
 }
 function showDuty(key) {const start=sessions.get(key);return 'Toplam: **'+fmt((totals.get(key)||0)+(start?Date.now()-start:0))+'**\\nDurum: **'+(start?'Mesaide':'Mesai dışında')+'**'+(start?'\\nBaşlangıç: <t:'+Math.floor(start/1000)+':F>':'');}
 const srv=http.createServer((req,res)=>{let ok=client.isReady();res.writeHead((req.url==='/'||req.url==='/health')?(ok?200:503):404,{'Content-Type':'application/json'});res.end(JSON.stringify({service:'Departman Of Justice',connected:ok}));});
