@@ -4,7 +4,7 @@ const installNumberRenewal = require('./renew-numbers');
 const { Client, GatewayIntentBits, ActivityType, SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, MessageFlags } = require('discord.js');
 
 const ENV = process.env;
-const DUTY_LOG_CHANNEL_ID = '1374101456684056726';
+const DUTY_LOG_CHANNEL_ID = '1566542232419307720';
 if (!ENV.DISCORD_TOKEN) { console.error('DISCORD_TOKEN is missing'); process.exit(1); }
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 const BANNER = 'https://cdn.discordapp.com/attachments/1374091464123879535/1566496926931750942/Z.png?ex=6ae8c173&is=6ae76ff3&hm=d823165f45fe02f7b30fcb2ded581ac21563dd4f0c4e79fc0f37ef63d2958d52';
