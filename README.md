@@ -45,3 +45,9 @@ Botu davet ederken `bot` ve `applications.commands` scope'larıyla davet et. İl
 - Botun rolü, numaralandırılacak kişilerin rollerinden yukarıda olmalı ve **Manage Nicknames / Takma Adları Yönet** iznine sahip olmalı.
 - USM son iki hane kısıtları nedeniyle uygun çift sayısı sınırlıdır; kapasite dolarsa bot yeni numara atamaz.
 - Numaralar sunucu içindeki kurgusal RP kimlikleridir, resmî sicil numaraları değildir.
+
+## Rastgele numara üretimi (güncel)
+- USM: Rastgele **5 haneli** badge number. Son iki hane ne kendi içinde aynı ne de art arda rakam olabilir; başka USM personelinin son iki hanesiyle çakışamaz. Üçlü artan/azalan rakam dizilerinden de kaçınılır.
+- DOJ: Rastgele **6 haneli** sicil numarası. Tek kural başka DOJ personelinin siciliyle aynı olmamasıdır.
+- Sistemler ayrı değerlendirilir. İki role birden sahip üyelerde takma ad için USM önceliklidir.
+- Daha önceden # ile atanmış numaralar otomatik değiştirilmez. Yeni numaralar rol atandığında veya /numara-tara ile verilir.
