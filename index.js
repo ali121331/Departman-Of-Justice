@@ -1,5 +1,6 @@
 const http = require('node:http');
 const numbering = require('./numbering');
+const caseArchive = require('./case-archive');
 const installNumberRenewal = require('./renew-numbers');
 const { Client, GatewayIntentBits, ActivityType, SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, MessageFlags } = require('discord.js');
 
@@ -189,6 +190,7 @@ client.on('guildMemberAdd',async member=>{
   }catch(err){console.error('Kayıtsız rolü verilemedi:',member.id,err.message);}
 });
 numbering.install(client);
+caseArchive.install(client);
 installNumberRenewal(client);
 client.on('error',e=>console.error('Discord:',e));
 client.login(ENV.DISCORD_TOKEN).catch(e=>{console.error('Login failed:',e);process.exit(1);});
