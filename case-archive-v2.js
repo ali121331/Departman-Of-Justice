@@ -140,6 +140,17 @@ async function assignJudge(i){
  c.judge={id:judge.id,channel:roomId};
  await save(g,c);await i.editReply('Hâkim atandı: <@'+judge.id+'> • <#'+roomId+'>');
 }
+async function changeStatus(i){
+ const g=i.guild,num=i.options.getString('numara').toUpperCase(),target=i.options.getString('durum'),c=db.get(key(g,num));
+ if(!c||!['active','appeal'].includes(c.status))return i.reply({content:'Bu durumda dosya bulunamadı.',flags:MessageFlags.Ephemeral});
+ if(i.user.id!==c.prosecutor&&!i.memberPermissions?.has(P.ManageGuild))return i.reply({content:'Dosya durumunu değiştirme yetkiniz yok.',flags:MessageFlags.Ephemeral});
+ await i.deferReply({flags:MessageFlags.Ephemeral});
+ const main=await g.channels.fetch(c.shared);
+ await main.setParent(target==='closed'?C.closed:C.appeal,{lockPermissions:false});
+ c.status=target;await save(g,c);
+ await main.send({embeds:[card('Dosya durumu • '+num,target==='closed'?'Dosya kapatıldı.':'Dosya itiraza gönderildi.')]});
+ await i.editReply('Dosya durumu güncellendi: '+target);
+}
 async function relay(m){
  const c=[...db.entries()].filter(([k,c])=>k.startsWith(m.guild.id+':')&&c.status==='active').map(x=>x[1]).find(c=>c.prosecutorRoom===m.channelId||c.judge?.channel===m.channelId||Object.values(c.participants||{}).some(p=>p.channel===m.channelId));
  if(!c)return;
@@ -169,6 +180,7 @@ async function install(client){
    if(i.isModalSubmit()&&i.customId.startsWith('filedecision:'))return decision(i);
    if(i.isChatInputCommand()&&i.commandName==='dosya-ekle')return addByRegistry(i);
    if(i.isChatInputCommand()&&i.commandName==='hakim')return assignJudge(i);
+   if(i.isChatInputCommand()&&i.commandName==='dosya-durum')return changeStatus(i);
   };
   work().catch(async e=>{console.error('Dosya işlemi:',e);const content='Dosya işlemi tamamlanamadı: '+e.message;if(i.deferred||i.replied)await i.editReply(content).catch(()=>{});else await i.reply({content,flags:MessageFlags.Ephemeral}).catch(()=>{})});
  });
