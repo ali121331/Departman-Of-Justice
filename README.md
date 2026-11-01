@@ -65,3 +65,11 @@ Botu davet ederken `bot` ve `applications.commands` scope'larıyla davet et. İl
 - Kayıtlar inceleme kanalının topic alanında tutulur; yeniden başlatıldığında buradan yüklenir. Kategorileri ve inceleme kanallarını silmeyin.
 - Botta **Manage Channels, View Channel, Send Messages, Read Message History, Attach Files, Manage Roles** (ayrı sistemler için) yetkileri gerekir. Savcı rolünün üzerinde bot rolü bulunması tavsiye edilir.
 - Orijinal Discord belge bağlantılarının geçerliliği değişebilir; kritik kayıtların yedeklenmesi gerekir.
+
+## Savcı karar iş akışı
+- Onay bekleyen özel dosya kanalına savcı **metin, PDF, görsel ve diğer ekleri** karar vermeden önce mesaj olarak yükleyebilir.
+- **Kabul Et** veya **Reddet** butonu gerekçe girmek için metin formu açar; gerekçe zorunludur.
+- Kabulde savcı ekleri ve ilk başvuru aktif ortak dosya kanalına aktarılır; ayrıca savcıya özel **savci-...** çalışma kanalı açılır. Başvuru sahibinin **avukat-...** özel kanalı da korunur.
+- Ret kararında savcı metni ve ekleri karar arşivinde tutulur; aktif dosya kanalı açılmaz.
+- Karar verildiğinde Onay Bekleyen inceleme kanalı, **Kapanan Dosyalar** kategorisinde erişimi kapalı **karar-...** kaydı olarak saklanır. Kaydı silmemek, yeniden başlatma sonrası veri ve delillerin korunması için gereklidir.
+- Otomatik arşiv yalnızca son 500 inceleme mesajındaki savcı metin/eklerini yeni aktif dosyaya kopyalar. Daha büyük dosyalar için kalıcı belge deposu gerekir.
