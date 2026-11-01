@@ -60,6 +60,23 @@ async function save(g,c){
  await canonical.setTopic(data(c));
 }
 function statement(m){const attachments=[...m.attachments.values()].map(a=>'['+esc(a.name)+']('+a.url+')').join('\n');return '**Gönderen:** <@'+m.author.id+'>\n**Metin:** '+esc(m.content||'Belge')+'\n**Ekler:**\n'+(attachments||'Yok')}
+async function commandFiling(i){
+ const attachment=i.options.getAttachment('belge'),description=i.options.getString('aciklama')?.trim();
+ if(!attachment&&!description)return i.reply({content:'Belge veya açıklamadan en az birini gir.',flags:MessageFlags.Ephemeral});
+ await i.deferReply({flags:MessageFlags.Ephemeral});
+ const g=i.guild;
+ const eligible=(await g.members.fetch()).filter(m=>!m.user.bot&&m.roles.cache.has(C.prosecutor));
+ if(!eligible.size)return i.editReply('Atanabilecek savcı bulunamadı.');
+ const prosecutor=[...eligible.values()][Math.floor(Math.random()*eligible.size)];
+ const number=next(g);
+ const review=await g.channels.create({name:'inceleme-'+number.toLowerCase(),type:ChannelType.GuildText,parent:C.pending,permissionOverwrites:perms(g,prosecutor.id)});
+ const c={number,owner:i.user.id,prosecutor:prosecutor.id,status:'pending',review:review.id,shared:null,participants:{},judge:null,decision:null,noLawyer:true};
+ await save(g,c);
+ const buttons=new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('file:yes:'+number).setLabel('Kabul').setStyle(ButtonStyle.Success),new ButtonBuilder().setCustomId('file:no:'+number).setLabel('Red').setStyle(ButtonStyle.Danger));
+ const body='**Atanan savcı:** <@'+prosecutor.id+'>\n**Sunan:** <@'+i.user.id+'>\n**Açıklama:** '+esc(description||'Belge sunuldu')+'\n**Ek:** '+(attachment?'['+esc(attachment.name)+']('+attachment.url+')':'Yok');
+ await review.send({embeds:[card('Dosya '+number,body)],components:[buttons],allowedMentions:{parse:[]}});
+ await i.editReply('Belge sunuldu. **Dosya:** '+number+' • **Atanan savcı:** <@'+prosecutor.id+'>. Avukat kanalı açılmayacak.');
+}
 async function filing(m){
  const g=m.guild;
  const eligible=(await g.members.fetch()).filter(u=>!u.user.bot&&u.roles.cache.has(C.prosecutor));
@@ -104,8 +121,8 @@ async function decision(i){
   before=batch.last().id;if(batch.size<100)break;
  }
  if(type==='yes'){
-  c.participants[c.owner]={kind:'avukat',edit:true};
-  const ownerRoom=await room(g,c,c.owner,'avukat',true);c.participants[c.owner].channel=ownerRoom.id;
+  if(!c.noLawyer)c.participants[c.owner]={kind:'avukat',edit:true};
+  if(!c.noLawyer){const ownerRoom=await room(g,c,c.owner,'avukat',true);c.participants[c.owner].channel=ownerRoom.id;}
   const prosecutorRoom=await room(g,c,c.prosecutor,'savci',true);c.prosecutorRoom=prosecutorRoom.id;
  }
  await save(g,c);
@@ -241,6 +258,7 @@ async function install(client){
    if(i.isButton()&&i.customId.startsWith('file:'))return reviewChoice(i);
    if(i.isModalSubmit()&&i.customId.startsWith('filedecision:'))return decision(i);
    if(i.isChatInputCommand()&&i.commandName==='dosya-ekle')return addByRegistry(i);
+   if(i.isChatInputCommand()&&i.commandName==='belge-sun')return commandFiling(i);
    if(i.isChatInputCommand()&&i.commandName==='hakim')return assignJudge(i);
    if(i.isChatInputCommand()&&i.commandName==='dosya-durum')return changeStatus(i);
    if(i.isChatInputCommand()&&i.commandName==='reddi-hakim')return recuseJudge(i);
