@@ -184,7 +184,7 @@ async function decision(i){
  }
  if(type==='yes'){
   if(!c.noLawyer)c.participants[c.owner]={kind:'avukat',edit:true};
-  if(!c.noLawyer){const ownerRoom=await room(g,c,c.owner,'avukat',true);c.participants[c.owner].channel=ownerRoom.id;}
+  if(!c.noLawyer){const ownerRoom=await room(g,c,c.owner,'avukat',true);c.participants[c.owner].channel=ownerRoom.id;await main.permissionOverwrites.edit(c.owner,{ViewChannel:true,ReadMessageHistory:true,SendMessages:false,AttachFiles:false});}
   const prosecutorRoom=await room(g,c,c.prosecutor,'savci',true);c.prosecutorRoom=prosecutorRoom.id;
  }
  await save(g,c);
@@ -207,6 +207,7 @@ async function addByRegistry(i){
  if(!channel)channel=await room(g,c,member.id,'katilimci',edit);
  else await channel.permissionOverwrites.edit(member.id,{ViewChannel:true,ReadMessageHistory:true,SendMessages:edit,AttachFiles:edit});
  c.participants[member.id]={kind:'katilimci',edit,channel:channel.id};
+ await (await g.channels.fetch(c.shared)).permissionOverwrites.edit(member.id,{ViewChannel:true,ReadMessageHistory:true,SendMessages:false,AttachFiles:false});
  await save(g,c);
  // Give access to prior case history without exposing the prosecutor-only main channel.
  const main=await g.channels.fetch(c.shared);
