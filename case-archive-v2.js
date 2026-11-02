@@ -165,6 +165,7 @@ async function filing(m){
  await save(g,c);
  const buttons=new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('file:yes:'+number).setLabel('Kabul').setStyle(ButtonStyle.Success),new ButtonBuilder().setCustomId('file:no:'+number).setLabel('Red').setStyle(ButtonStyle.Danger));
  await review.send({embeds:[card('Dosya '+number,'**Atanan savcı:** <@'+prosecutor.id+'>\n**Başvuru sahibi:** <@'+m.author.id+'>\n\n'+statement(m))],components:[buttons],allowedMentions:{parse:[]}});
+ if(m.attachments.size)await sendEvidence(review,'**Başvuru ekleri • '+number+'**',[...m.attachments.values()]);
  await m.reply({content:'Başvurunuz kaydedildi. **Dosya numarası:** '+number+'\n**Atanan savcı:** <@'+prosecutor.id+'>',allowedMentions:{repliedUser:false,users:[]}});
 }
 async function reviewChoice(i){
@@ -193,7 +194,7 @@ async function decision(i){
   if(!batch.size)break;
   for(const m of [...batch.values()].reverse()){
    const body=m.author.bot?m.embeds.map(e=>e.description||'').join('\n'):statement(m);
-   if(body)await main.send({embeds:[card('İnceleme kaydı • '+num,body.slice(0,4000))]});
+   if(body||m.attachments.size)await sendEvidence(main,'**İnceleme kaydı • '+num+'**\n'+String(body||'Ek belge').slice(0,1400),[...m.attachments.values()]);
   }
   before=batch.last().id;if(batch.size<100)break;
  }
