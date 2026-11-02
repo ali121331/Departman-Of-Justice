@@ -80,6 +80,51 @@ async function commandFiling(i){
  await review.send({embeds:[card('Dosya '+number,body)],components:[buttons],allowedMentions:{parse:[]}});
  await i.editReply('Belge sunuldu. **Dosya:** '+number+' • **Atanan savcı:** <@'+prosecutor.id+'> • **Atama:** '+(selected?'Elle':'Rastgele')+'. Avukat kanalı açılmayacak.');
 }
+
+async function changeProsecutor(i){
+ const g=i.guild,c=resolveCase(g,i.options.getString('dosya'));
+ if(!c||!['pending','active','appeal','closed'].includes(c.status))
+  return i.reply({content:'Dosya bulunamadı.',flags:MessageFlags.Ephemeral});
+ const members=await g.members.fetch();
+ const actor=members.get(i.user.id);
+ if(!actor?.roles.cache.has(C.prosecutor)&&!i.memberPermissions?.has(P.ManageGuild))
+  return i.reply({content:'Savcı rolü veya Sunucuyu Yönet yetkisi gerekiyor.',flags:MessageFlags.Ephemeral});
+ const intended=i.options.getUser('yeni-savci')||i.user;
+ const chosen=members.get(intended.id);
+ if(!chosen||chosen.user.bot||!chosen.roles.cache.has(C.prosecutor))
+  return i.reply({content:'Yeni görevli sunucuda olmalı ve Savcı rolüne sahip olmalı.',flags:MessageFlags.Ephemeral});
+ if(chosen.id===c.prosecutor)
+  return i.reply({content:'Bu kişi zaten dosyanın savcısı.',flags:MessageFlags.Ephemeral});
+ const previous=c.prosecutor;
+ await i.deferReply({flags:MessageFlags.Ephemeral});
+ const main=c.shared?await g.channels.fetch(c.shared).catch(()=>null):null;
+ const review=c.review?await g.channels.fetch(c.review).catch(()=>null):null;
+ const canonical=main||review;
+ if(!canonical)throw Error('Dosyanın kayıt kanalı bulunamadı.');
+ const oldRoom=c.prosecutorRoom?await g.channels.fetch(c.prosecutorRoom).catch(()=>null):null;
+ // Build new access before revoking the previous prosecutor, so interrupted transfers remain recoverable.
+ await canonical.permissionOverwrites.edit(chosen.id,{ViewChannel:true,SendMessages:true,ReadMessageHistory:true,AttachFiles:true});
+ let newRoom=null;
+ if(main&&c.status!=='pending'){
+  newRoom=await room(g,c,chosen.id,'savci',true);
+  await newRoom.send({embeds:[card('Dosya devri • '+c.number,'Dosyanın eski kayıtları savcının ana dosyasında korunur. Dosya geçmişi aşağıya aktarılıyor.')]});
+  const history=await main.messages.fetch({limit:100});
+  for(const m of [...history.values()].reverse()){
+   const description=m.embeds.map(e=>e.description||'').join('\n')||m.content;
+   if(description)await newRoom.send({embeds:[card('Dosya geçmişi • '+c.number,description.slice(0,3900))]});
+  }
+ }
+ const event={from:previous,to:chosen.id,by:i.user.id,reason:i.options.getString('gerekce')||'Savcı yeniden ataması',at:Date.now()};
+ c.prosecutor=chosen.id;
+ if(newRoom)c.prosecutorRoom=newRoom.id;
+ c.prosecutorTransfers=[...(c.prosecutorTransfers||[]),event].slice(-8);
+ await save(g,c);
+ await canonical.send({embeds:[card('Savcı değişikliği • '+c.number,'**Önceki savcı:** <@'+previous+'>\n**Yeni savcı:** <@'+chosen.id+'>\n**İşlemi yapan:** <@'+i.user.id+'>\n**Gerekçe:** '+esc(event.reason))],allowedMentions:{parse:[]}});
+ await canonical.permissionOverwrites.edit(previous,{ViewChannel:false,SendMessages:false,AttachFiles:false});
+ if(oldRoom)await oldRoom.permissionOverwrites.edit(previous,{ViewChannel:false,SendMessages:false,AttachFiles:false}).catch(err=>console.warn('Eski savcı oda yetkisi:',err.message));
+ await i.editReply('Dosya '+c.number+' yeni savcıya devredildi: <@'+chosen.id+'>.');
+}
+
 async function addCaseDocument(i){
  const num=i.options.getString('dosya'),source=i.options.getString('kaynak')?.trim();
  const file=i.options.getAttachment('belge'),description=i.options.getString('aciklama')?.trim();
@@ -277,6 +322,7 @@ async function install(client){
    if(i.isChatInputCommand()&&i.commandName==='dosya-ekle')return addByRegistry(i);
    if(i.isChatInputCommand()&&i.commandName==='belge-sun')return commandFiling(i);
    if(i.isChatInputCommand()&&i.commandName==='dosyaya-belge')return addCaseDocument(i);
+   if(i.isChatInputCommand()&&i.commandName==='savci-degistir')return changeProsecutor(i);
    if(i.isChatInputCommand()&&i.commandName==='hakim')return assignJudge(i);
    if(i.isChatInputCommand()&&i.commandName==='dosya-durum')return changeStatus(i);
    if(i.isChatInputCommand()&&i.commandName==='reddi-hakim')return recuseJudge(i);
