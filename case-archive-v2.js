@@ -59,6 +59,20 @@ async function save(g,c){
  if(!canonical)throw Error('Kalıcı dosya kayıt kanalı bulunamadı');
  await canonical.setTopic(data(c));
 }
+async function sendEvidence(channel,body,attachments=[]){
+ const list=[...attachments].filter(a=>a?.url);
+ const message={content:body,allowedMentions:{parse:[]}};
+ if(list.length){
+  message.files=list.slice(0,10).map(a=>({attachment:a.url,name:String(a.name||'belge').slice(0,100)}));
+ }
+ try{return await channel.send(message)}
+ catch(err){
+  if(!list.length)throw err;
+  console.warn('Dosya ek olarak gönderilemedi; doğrudan bağlantıya dönülüyor:',err.message);
+  const links=list.map(a=>String(a.name||'Belge')+': '+a.url).join('\n');
+  return channel.send({content:(body+'\n'+links).slice(0,1900),allowedMentions:{parse:[]}});
+ }
+}
 function statement(m){const attachments=[...m.attachments.values()].map(a=>'['+esc(a.name)+']('+a.url+')').join('\n');return '**Gönderen:** <@'+m.author.id+'>\n**Metin:** '+esc(m.content||'Belge')+'\n**Ekler:**\n'+(attachments||'Yok')}
 async function commandFiling(i){
  const attachment=i.options.getAttachment('belge'),description=i.options.getString('aciklama')?.trim(),source=i.options.getString('kaynak')?.trim();
@@ -78,6 +92,7 @@ async function commandFiling(i){
  const buttons=new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('file:yes:'+number).setLabel('Kabul').setStyle(ButtonStyle.Success),new ButtonBuilder().setCustomId('file:no:'+number).setLabel('Red').setStyle(ButtonStyle.Danger));
  const body='**Atanan savcı:** <@'+prosecutor.id+'>\n**Atama yöntemi:** '+(selected?'Elle seçim':'Rastgele')+'\n**Belgenin kaynağı (beyan):** '+esc(source)+'\n**Sisteme kaydeden:** <@'+i.user.id+'>\n**Açıklama:** '+esc(description||'Belge sunuldu')+'\n**Ek:** '+(attachment?'['+esc(attachment.name)+']('+attachment.url+')':'Yok');
  await review.send({embeds:[card('Dosya '+number,body)],components:[buttons],allowedMentions:{parse:[]}});
+ if(attachment)await sendEvidence(review,'**İlk başvuru belgesi • '+number+'**',[attachment]);
  await i.editReply('Belge sunuldu. **Dosya:** '+number+' • **Atanan savcı:** <@'+prosecutor.id+'> • **Atama:** '+(selected?'Elle':'Rastgele')+'. Avukat kanalı açılmayacak.');
 }
 
@@ -136,7 +151,7 @@ async function addCaseDocument(i){
  await i.deferReply({flags:MessageFlags.Ephemeral});
  const main=await i.guild.channels.fetch(c.shared);
  const text='**Belge kaynağı (beyan):** '+esc(source)+'\n**Sisteme kaydeden:** <@'+i.user.id+'>\n**Açıklama:** '+esc(description||'Belge sunuldu')+'\n**Ek:** '+(file?'['+esc(file.name)+']('+file.url+')':'Yok');
- await main.send({embeds:[card('Dosyaya Yeni Belge • '+c.number,text)],allowedMentions:{parse:[]}});
+ await sendEvidence(main,'**Dosyaya Yeni Belge • '+c.number+'**\n'+text,file?[file]:[]);
  await i.editReply('Belge '+c.number+' dosyasına kaydedildi. Kaynak: '+esc(source));
 }
 async function filing(m){
@@ -297,7 +312,7 @@ async function relay(m){
  const c=[...db.entries()].filter(([k,c])=>k.startsWith(m.guild.id+':')&&c.status==='active').map(x=>x[1]).find(c=>c.prosecutorRoom===m.channelId||c.judge?.channel===m.channelId||Object.values(c.participants||{}).some(p=>p.channel===m.channelId));
  if(!c)return;
  const main=await m.guild.channels.fetch(c.shared).catch(()=>null);if(!main)return;
- await main.send({embeds:[card('Dosya '+c.number+' • Belge/Beyan',statement(m))],allowedMentions:{parse:[]}});
+ await sendEvidence(main,'**Dosya '+c.number+' • Belge/Beyan**\n'+statement(m),[...m.attachments.values()]);
  // Participants may view prior records only from their private rooms.
  await m.react('✅').catch(()=>{});
 }
