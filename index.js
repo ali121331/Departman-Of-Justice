@@ -13,6 +13,16 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 const BANNER = 'https://cdn.discordapp.com/attachments/1374091464123879535/1566496926931750942/Z.png?ex=6ae8c173&is=6ae76ff3&hm=d823165f45fe02f7b30fcb2ded581ac21563dd4f0c4e79fc0f37ef63d2958d52';
 const LOGO = 'https://cdn.discordapp.com/attachments/1374091464123879535/1566497126354255922/images.png?ex=6ae8c1a3&is=6ae77023&hm=1c38cc6797053f860fcc866cb471211c2741db9ec59a5dc5b4fbbcb6970b1fe1';
 const color = 0x173b63;
+// 10 Kasım anma durumu: Türkiye saatine göre yalnızca 10 Kasım 2026'da gösterilir.
+const regularPresence = {activities:[{name:'anevrix yapmıştır',type:ActivityType.Playing}],status:'online'};
+const remembrancePresence = {activities:[{name:'🇹🇷 10 Kasım | Saygı, Minnet ve Özlemle ♾️',type:ActivityType.Custom}],status:'online'};
+function applyRemembrancePresence(){
+ if(!client.isReady())return;
+ const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const remembering=day==='2026-11-10';
+ client.user.setPresence(remembering?remembrancePresence:regularPresence);
+}
+
 const sessions = new Map();
 const totals = new Map();
 const registered = new Set();
@@ -104,7 +114,9 @@ const srv=http.createServer((req,res)=>{let ok=client.isReady();res.writeHead((r
 srv.listen(Number(ENV.PORT||10000),'0.0.0.0');
 client.once('ready',async()=>{
  console.log('DOJ online:',client.user.tag);
- client.user.setPresence({activities:[{name:'anevrix yapmıştır',type:ActivityType.Playing}],status:'online'});
+ applyRemembrancePresence();
+ const remembranceTimer=setInterval(applyRemembrancePresence,60*1000);
+ remembranceTimer.unref();
  try{/* Legacy duty state replaced by duty-units.js */}catch(e){console.error('Duty load:',e);}
  const target=ENV.GUILD_ID?client.guilds.cache.filter(g=>g.id===ENV.GUILD_ID):client.guilds.cache;
  for(const [id,g] of target){try{await g.commands.set(commandDefinitions.map(c=>c.toJSON()));registered.add(id);console.log('Commands registered:',id);}catch(e){console.error('Command register failed:',id,e.message);}}
