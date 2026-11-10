@@ -15,7 +15,7 @@ const LOGO = 'https://cdn.discordapp.com/attachments/1374091464123879535/1566497
 const color = 0x173b63;
 // 10 Kasım anma durumu: Türkiye saatine göre yalnızca 10 Kasım 2026'da gösterilir.
 const regularPresence = {activities:[{name:'anevrix yapmıştır',type:ActivityType.Playing}],status:'online'};
-const remembrancePresence = {activities:[{name:'🇹🇷 10 Kasım | Saygı, Minnet ve Özlemle ♾️',type:ActivityType.Custom}],status:'online'};
+const remembrancePresence = {activities:[{name:'🇹🇷 10 Kasım | Saygı, Minnet ve Özlemle ♾️',type:ActivityType.Playing}],status:'online'};
 function applyRemembrancePresence(){
  if(!client.isReady())return;
  const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
